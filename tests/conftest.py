@@ -9,7 +9,8 @@ import pytest
 os.environ.setdefault('JWT_SECRET', 'ci-test-jwt-secret-do-not-use-in-prod')
 os.environ.setdefault('GITHUB_CLIENT_ID', 'test-client-id-xxxxxx')
 os.environ.setdefault('GITHUB_CLIENT_SECRET', 'test-client-secret-xxxxxx')
-os.environ.setdefault('MAKE_WEBHOOK_SECRET', 'ci-test-secret')
+os.environ.setdefault('MAKE_WEBHOOK_SECRET', 'test_secret_for_ci')
+os.environ.setdefault('ADMIN_PASSWORD', 'ci-test-admin-pw')
 
 
 @pytest.fixture(scope='session')

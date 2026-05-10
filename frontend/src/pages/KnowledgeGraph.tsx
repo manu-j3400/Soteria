@@ -195,6 +195,8 @@ export default function KnowledgeGraph() {
                             <button onClick={() => setSelectedNode(null)} style={{ color: '#404040', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
                                 onMouseEnter={e => (e.currentTarget.style.color = '#E5E5E5')}
                                 onMouseLeave={e => (e.currentTarget.style.color = '#404040')}
+                                aria-label="Close node details"
+                                title="Close"
                             >×</button>
                         </div>
                         {/* Verdict */}

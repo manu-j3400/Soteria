@@ -335,6 +335,8 @@ export default function BatchScanner() {
                                                 style={{ color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}
                                                 onMouseEnter={e => (e.currentTarget.style.color = C.red)}
                                                 onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
+                                                aria-label={`Remove ${f.filename}`}
+                                                title="Remove file"
                                             >
                                                 ×
                                             </button>

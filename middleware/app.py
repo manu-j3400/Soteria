@@ -521,6 +521,26 @@ def _extract_instruction(payload):
         "Generate isolated improvements only, prioritize AI/ML reliability, and keep outputs safe for draft PR review."
     )[:2000]
 
+def _require_json_body():
+    """Ensure request body is a JSON object."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return None, (jsonify({'error': 'Request body must be a valid JSON object'}), 400)
+    return data, None
+
+def _clean_text(value, max_len=None, lower=False):
+    """Basic sanitization for user-provided text fields."""
+    if value is None:
+        value = ""
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.replace('\x00', '').strip()
+    if lower:
+        value = value.lower()
+    if max_len is not None:
+        value = value[:max_len]
+    return value
+
 MODELPATH = ROOT / 'backend'/ 'ML_master' / 'acidModel.pkl'
 lastModelTime = 0
 model = None
@@ -695,14 +715,21 @@ def init_users_db():
     # Seed default admin if none exists
     c.execute('SELECT id FROM users WHERE is_admin = 1')
     if not c.fetchone():
-        random_pw = secrets.token_urlsafe(16)
-        pw_hash = bcrypt.hashpw(random_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        is_random = False
+        if not admin_password:
+            admin_password = secrets.token_urlsafe(16)
+            is_random = True
+        pw_hash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         c.execute(
             'INSERT INTO users (name, email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, ?)',
             ('Admin', 'admin@soteria.dev', pw_hash, 1, datetime.now().isoformat())
         )
         conn.commit()
-        print(f"✅ Default admin seeded (admin@soteria.dev / {random_pw}) — save this password, it will not be shown again")
+        if is_random:
+            print(f"WARNING: ADMIN_PASSWORD not set — generated random password: {admin_password} (save this, shown once)")
+        else:
+            print("Default admin seeded (admin@soteria.dev / [from ADMIN_PASSWORD env])")
     
     conn.close()
     print("✅ Users database initialized")
@@ -802,13 +829,17 @@ def auth_signup():
       400: {description: Validation error}
       409: {description: Email already registered}
     """
-    data = request.get_json(silent=True) or {}
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '')
+    data, error = _require_json_body()
+    if error:
+        return error
+    name = _clean_text(data.get('name'), max_len=120)
+    email = _clean_text(data.get('email'), max_len=255, lower=True)
+    password = _clean_text(data.get('password'), max_len=256)
 
     if not name or not email or not password:
         return jsonify({'error': 'Name, email, and password are required'}), 400
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        return jsonify({'error': 'A valid email is required'}), 400
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters'}), 400
 
@@ -860,9 +891,11 @@ def auth_login():
       200: {description: Login successful, schema: {type: object, properties: {token: {type: string}, user: {type: object}}}}
       401: {description: Invalid credentials}
     """
-    data = request.get_json(silent=True) or {}
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '')
+    data, error = _require_json_body()
+    if error:
+        return error
+    email = _clean_text(data.get('email'), max_len=255, lower=True)
+    password = _clean_text(data.get('password'), max_len=256)
 
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
@@ -960,9 +993,11 @@ def auth_me():
 @app.route('/api/auth/admin/login', methods=['POST'])
 @rate_limit(max_requests=5, window_seconds=300) # 5 admin login attempts per 5 minutes
 def auth_admin_login():
-    data = request.get_json(silent=True) or {}
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '')
+    data, error = _require_json_body()
+    if error:
+        return error
+    email = _clean_text(data.get('email'), max_len=255, lower=True)
+    password = _clean_text(data.get('password'), max_len=256)
 
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
@@ -2917,7 +2952,8 @@ def _is_safe_external_url(url: str) -> bool:
 def _require_automation_secret():
     """Shared auth check for automation endpoints. Returns error tuple or None."""
     configured_secret = os.environ.get('MAKE_WEBHOOK_SECRET')
-    provided_secret = request.headers.get('X-Automation-Secret', '')
+    provided_secret = (request.headers.get('X-Automation-Secret')
+                       or request.args.get('secret', ''))
     if not configured_secret:
         return jsonify({
             'status': 'error',

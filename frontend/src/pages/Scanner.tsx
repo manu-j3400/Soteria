@@ -367,7 +367,7 @@ export default function Scanner() {
             }}
           >
             <span>! {toastError}</span>
-            <button onClick={() => setToastError(null)} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>×</button>
+            <button onClick={() => setToastError(null)} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }} aria-label="Dismiss error" title="Dismiss">×</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -390,7 +390,7 @@ export default function Scanner() {
               <div style={{ padding: '8px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.12em' }}>SCAN LOG</span>
                 {history.length > 0 && (
-                  <button onClick={() => setHistory([])} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontSize: 9, fontFamily: 'inherit' }}>CLR</button>
+                  <button onClick={() => setHistory([])} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontSize: 9, fontFamily: 'inherit' }} aria-label="Clear scan history" title="Clear history">CLR</button>
                 )}
               </div>
               {history.length === 0 ? (
