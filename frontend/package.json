@@ -42,7 +42,7 @@
     "@remixicon/react": "4.6.0",
     "@supabase/supabase-js": "^2.97.0",
     "@tailwindcss/vite": "^4.1.4",
-    "@typescript/native-preview": "7.0.0-dev.20250522.2",
+    "@typescript/native-preview": "7.0.0-dev.20260510.1",
     "@vercel/analytics": "^1.6.1",
     "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
