@@ -75,3 +75,71 @@ class TestAnalyze:
         assert r1.status_code == 200
         assert r2.status_code == 200
         assert r1.get_json()['malicious'] == r2.get_json()['malicious']
+
+
+class TestGCNPath:
+    def test_gcn_probability_always_present(self, client):
+        """gcn_probability key always in metadata (None when GCN disabled)."""
+        resp = client.post('/analyze', json={'code': BENIGN_CODE})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'gcn_probability' in data['metadata']
+
+    def test_gcn_inference_when_enabled(self, client):
+        """When GCN patched active, gcn_probability reflects model output."""
+        import sys
+        import uuid
+        from unittest.mock import MagicMock, patch
+        import middleware.app as mapp
+
+        # Unique Python-specific code (type hints ensure Python detection)
+        uid = uuid.uuid4().hex[:8]
+        unique_code = (
+            f"import os\n"
+            f"def gcn_test_{uid}(x: int) -> int:\n"
+            f"    y: int = x + 1\n"
+            f"    return y\n"
+        )
+        mock_data = MagicMock(name='gcn_data')
+
+        mock_cfg = MagicMock()
+        mock_cfg.extract_function_graph.return_value = mock_data
+        mock_trainer = MagicMock()
+        mock_trainer.predict_gcn.return_value = (True, 0.8)
+
+        extra_modules = {'cfg_extractor': mock_cfg, 'trainerModel_GCN': mock_trainer}
+        with patch.dict(sys.modules, extra_modules), \
+             patch.object(mapp, '_GCN_ENABLED', True), \
+             patch.object(mapp, '_gcn_model', MagicMock(name='gcn_model')), \
+             patch.object(mapp, '_gcn_f1', 0.65):
+            resp = client.post('/analyze', json={'code': unique_code})
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['metadata']['gcn_probability'] == 0.8
+
+
+class TestSNNPath:
+    def test_snn_temporal_in_metadata_when_enabled(self, client):
+        """When SNN enabled+mocked, snn_temporal key appears in metadata."""
+        from unittest.mock import MagicMock, patch
+        from types import SimpleNamespace
+
+        snn_result = SimpleNamespace(
+            anomaly_prob=0.9,
+            is_anomalous=True,
+            isi_cv=1.2,
+            firing_rate_hz=50.0,
+            n_events=100,
+            inference_ms=3.5,
+        )
+        mock_profiler = MagicMock()
+        mock_profiler.profile.return_value = snn_result
+
+        with patch('middleware.app.SNN_ENABLED', True), \
+             patch('middleware.app._snn_profiler', mock_profiler):
+            resp = client.post('/analyze', json={'code': BENIGN_CODE})
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'snn_temporal' in data['metadata']

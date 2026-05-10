@@ -555,6 +555,12 @@ def get_db_connection(readonly=False):
     return conn
 
 
+_SCAN_DB_MIGRATIONS = [
+    (1, 'ALTER TABLE scans ADD COLUMN user_id INTEGER'),
+    (2, 'ALTER TABLE training_data ADD COLUMN user_id INTEGER DEFAULT NULL'),
+]
+
+
 def init_scan_db():
     """Initialize SQLite database for scan history."""
     conn = get_db_connection()
@@ -572,11 +578,6 @@ def init_scan_db():
         reason TEXT
     )''')
 
-    try:
-        c.execute('ALTER TABLE scans ADD COLUMN user_id INTEGER')
-    except sqlite3.OperationalError:
-        pass
-
     # Training data table — stores scanned code for future model retraining
     c.execute('''CREATE TABLE IF NOT EXISTS training_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -591,11 +592,24 @@ def init_scan_db():
         source TEXT DEFAULT 'scanner',
         user_id INTEGER DEFAULT NULL
     )''')
-    # Migrate: add user_id column if this is an existing DB without it
-    try:
-        c.execute('ALTER TABLE training_data ADD COLUMN user_id INTEGER DEFAULT NULL')
-    except sqlite3.OperationalError:
-        pass  # column already exists
+
+    # Schema version tracking
+    c.execute('''CREATE TABLE IF NOT EXISTS schema_version (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        version INTEGER NOT NULL DEFAULT 0
+    )''')
+    c.execute('INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 0)')
+    c.execute('SELECT version FROM schema_version WHERE id = 1')
+    current_ver = c.fetchone()[0]
+
+    for ver, sql in _SCAN_DB_MIGRATIONS:
+        if current_ver < ver:
+            try:
+                c.execute(sql)
+            except sqlite3.OperationalError:
+                pass  # column already exists (idempotent)
+            c.execute('UPDATE schema_version SET version = ? WHERE id = 1', (ver,))
+            current_ver = ver
     try:
         c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_training_hash ON training_data(code_hash)')
     except sqlite3.OperationalError:
@@ -616,7 +630,7 @@ def _save_training_sample(code: str, language: str, is_malicious: bool,
     """
     import threading
     code_hash = hashlib.sha256(code.encode('utf-8', errors='replace')).hexdigest()[:32]
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.now(timezone.utc).isoformat()
     # Truncate very large code samples (>50k chars) to keep DB size manageable
     code_stored = code[:50000] if len(code) > 50000 else code
 
@@ -3504,6 +3518,7 @@ def github_token():
     return jsonify(resp.json()), resp.status_code
 
 @app.route('/github/repos', methods=['GET'])
+@rate_limit(max_requests=30, window_seconds=60)
 def github_repos():
     auth_header = request.headers.get('Authorization')
     if not auth_header:

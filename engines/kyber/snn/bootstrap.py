@@ -236,7 +236,24 @@ def bootstrap_from_csv(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+def _suppress_daemon_stderr() -> None:
+    """
+    Redirect stderr to /dev/null at interpreter shutdown to suppress the
+    cosmetic 'could not acquire lock for <stdout>' message emitted when
+    daemon threads from sandboxed code execution are still alive at exit.
+    """
+    import atexit
+    def _redirect() -> None:
+        try:
+            import sys, os
+            sys.stderr = open(os.devnull, 'w')  # noqa: WPS515 — intentional at exit
+        except Exception:
+            pass
+    atexit.register(_redirect)
+
+
 def main() -> None:
+    _suppress_daemon_stderr()
     parser = argparse.ArgumentParser(
         description="Bootstrap a SNN temporal anomaly profiler from the ACID malware corpus."
     )

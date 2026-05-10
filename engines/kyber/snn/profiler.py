@@ -60,7 +60,7 @@ _SAFE_BUILTINS: dict = {
         'abs', 'all', 'any', 'bin', 'bool', 'bytearray', 'bytes',
         'callable', 'chr', 'complex', 'dict', 'dir', 'divmod',
         'enumerate', 'filter', 'float', 'format', 'frozenset',
-        'getattr', 'globals', 'hasattr', 'hash', 'hex', 'id', 'input', 'int',
+        'getattr', 'globals', 'hasattr', 'hash', 'hex', 'id', 'int',
         'isinstance', 'issubclass', 'iter', 'len', 'list', 'locals',
         'map', 'max', 'memoryview', 'min', 'next', 'object', 'oct',
         'ord', 'pow', 'print', 'property', 'range', 'repr', 'reversed',

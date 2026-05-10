@@ -121,14 +121,15 @@ class SemanticEncoder:
             total_bins[idx] = 1.0
 
         # --- Smooth channels 0-3 with sliding-window kernel ---
+        # Truncate to n_raw_bins: mode="same" outputs max(n_raw_bins, window_bins)
         kernel   = np.ones(self.window_bins, dtype=np.float32) / self.window_bins
         smoothed = {
-            etype: np.convolve(type_bins[etype], kernel, mode="same")
+            etype: np.convolve(type_bins[etype], kernel, mode="same")[:n_raw_bins]
             for etype in _EVENT_TYPES
         }
 
         # --- Smooth total for derivative, burst, silence channels ---
-        total_smooth = np.convolve(total_bins, kernel, mode="same")
+        total_smooth = np.convolve(total_bins, kernel, mode="same")[:n_raw_bins]
 
         # --- Channel 4: rate derivative (central difference) ---
         deriv = np.gradient(total_smooth.astype(np.float64)).astype(np.float32)
@@ -181,10 +182,11 @@ class SemanticEncoder:
         # Approximated as a causal window of width `window` (aligned left) for
         # edge bins, matching the behavior of the original centered window.
         w_arr = np.ones(window, dtype=np.float64) / window
-        sum_x  = np.convolve(arr,       w_arr, mode="same") * window
-        sum_x2 = np.convolve(arr ** 2,  w_arr, mode="same") * window
+        # Truncate to n to handle n < window (convolve mode="same" outputs max(n, window))
+        sum_x  = np.convolve(arr,        w_arr, mode="same")[:n] * window
+        sum_x2 = np.convolve(arr ** 2,   w_arr, mode="same")[:n] * window
         # Effective window size per position (smaller near edges)
-        counts = np.convolve(np.ones(n), w_arr, mode="same") * window
+        counts = np.convolve(np.ones(n), w_arr, mode="same")[:n] * window
         counts = np.clip(counts, 1, window)
 
         mean   = sum_x / counts
@@ -200,7 +202,8 @@ class SemanticEncoder:
         """
         zero_mask = (binary_signal == 0).astype(np.float32)
         kernel    = np.ones(window, dtype=np.float32) / window
-        return np.convolve(zero_mask, kernel, mode="same").astype(np.float32)
+        # Truncate to input length (mode="same" outputs max(n, window) when window > n)
+        return np.convolve(zero_mask, kernel, mode="same")[:len(binary_signal)].astype(np.float32)
 
     @staticmethod
     def _normalize_channels(arr: np.ndarray) -> np.ndarray:

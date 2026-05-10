@@ -202,10 +202,10 @@ class TestAuthenticatedEndpoints:
         assert "scans" in data
         assert isinstance(data["scans"], list)
 
-    def test_scan_history_requires_auth(self, client):
-        """GET /scan-history without token returns 401."""
+    def test_scan_history_unauthenticated(self, client):
+        """GET /scan-history without token returns 200 (optional auth — shows public scans)."""
         r = client.get("/scan-history")
-        assert r.status_code in (401, 403)
+        assert r.status_code == 200
 
     def test_drift_endpoint_returns_status(self, client):
         """GET /api/model/drift returns status field."""
