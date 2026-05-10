@@ -14,7 +14,7 @@ requests
 flasgger
 tree-sitter>=0.25.0
 tree-sitter-python>=0.25.0
-tree-sitter-java>=0.23.0
+tree-sitter-java>=0.23.5
 tree-sitter-javascript>=0.25.0
 tree-sitter-typescript>=0.23.0
 tree-sitter-c>=0.24.0
