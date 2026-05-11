@@ -11,6 +11,12 @@ _DANGEROUS_ATTR_CALLS = frozenset({
     "popen",    # os.popen
     "call", "Popen", "run", "check_output",  # subprocess
 })
+_SQL_SINK_CALLS = frozenset({
+    "execute", "executemany", "executescript", "raw", "query", "cursor",
+})
+_SQL_KEYWORDS = frozenset({
+    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "UNION",
+})
 _SUSPICIOUS_IMPORTS = frozenset({
     "os", "subprocess", "socket", "ctypes",
     "pickle", "marshal", "base64",
@@ -66,6 +72,26 @@ def get_Node_Counts(sourceCode=""):
                         n_suspicious += 1
         counts["n_suspicious_imports"] = n_suspicious
         counts["import_count"] = import_count
+
+        # SQL sink call count + string-concat SQL detection
+        n_sql_sinks = 0
+        has_sql_concat = 0
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute) and node.func.attr in _SQL_SINK_CALLS:
+                    n_sql_sinks += 1
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Constant) and isinstance(child.value, str):
+                        if any(kw in child.value.upper() for kw in _SQL_KEYWORDS):
+                            has_sql_concat = 1
+            if isinstance(node, ast.JoinedStr):  # f-strings
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Constant) and isinstance(child.value, str):
+                        if any(kw in child.value.upper() for kw in _SQL_KEYWORDS):
+                            has_sql_concat = 1
+        counts["n_sql_sink_calls"] = n_sql_sinks
+        counts["has_sql_concat"] = has_sql_concat
 
         # entropy features — delegate to entropy_profiler
         try:
