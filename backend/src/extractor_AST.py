@@ -21,11 +21,19 @@ _SUSPICIOUS_IMPORTS = frozenset({
     "os", "subprocess", "socket", "ctypes",
     "pickle", "marshal", "base64",
 })
+_TAINT_SOURCE_NAMES = frozenset({
+    "input", "raw_input",
+})
+_TAINT_SOURCE_ATTRS = frozenset({
+    "args", "form", "json", "data", "values", "cookies",  # request.*
+    "argv",       # sys.argv
+    "environ", "getenv",  # os.environ / os.getenv
+})
 
 
 def get_Node_Counts(sourceCode=""):
     """
-    Counts AST node types plus 7 engineered security features.
+    Counts AST node types plus 12 engineered security features.
     """
 
     try:
@@ -92,6 +100,40 @@ def get_Node_Counts(sourceCode=""):
                             has_sql_concat = 1
         counts["n_sql_sink_calls"] = n_sql_sinks
         counts["has_sql_concat"] = has_sql_concat
+
+        # Taint features — per-function: source present AND sink present
+        n_user_input_sources = 0
+        taint_reaches_sql = 0
+        taint_reaches_shell = 0
+        for func_node in ast.walk(tree):
+            if not isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            has_source = False
+            has_sql_sink = False
+            has_shell_sink = False
+            for node in ast.walk(func_node):
+                if isinstance(node, ast.Call):
+                    if isinstance(node.func, ast.Name):
+                        if node.func.id in _TAINT_SOURCE_NAMES:
+                            has_source = True
+                            n_user_input_sources += 1
+                        if node.func.id in _DANGEROUS_CALLS:
+                            has_shell_sink = True
+                    elif isinstance(node.func, ast.Attribute):
+                        if node.func.attr in _TAINT_SOURCE_ATTRS:
+                            has_source = True
+                            n_user_input_sources += 1
+                        if node.func.attr in _SQL_SINK_CALLS:
+                            has_sql_sink = True
+                        if node.func.attr in _DANGEROUS_ATTR_CALLS:
+                            has_shell_sink = True
+            if has_source and has_sql_sink:
+                taint_reaches_sql = 1
+            if has_source and has_shell_sink:
+                taint_reaches_shell = 1
+        counts["n_user_input_sources"] = n_user_input_sources
+        counts["taint_reaches_sql"] = taint_reaches_sql
+        counts["taint_reaches_shell"] = taint_reaches_shell
 
         # entropy features — delegate to entropy_profiler
         try:
