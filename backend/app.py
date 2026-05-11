@@ -196,7 +196,8 @@ def get_all_users(current_user):
 MALICIOUS_PATTERNS = [
     'eval(', 'exec(', '__import__', 'os.system', 'subprocess',
     'rm -rf', 'DROP TABLE', 'DELETE FROM', '<script>alert',
-    'document.cookie', 'base64.b64decode', 'pickle.loads'
+    'document.cookie', 'base64.b64decode', 'pickle.loads',
+    'SELECT * FROM', 'UNION SELECT', "' OR '1'='1",
 ]
 
 def scan_file_content(content):
@@ -248,22 +249,30 @@ def scan_file_content(content):
     """Scans a single file content for malicious patterns."""
     found_patterns = []
     content_lower = content.lower()
-    
+
     # 1. Static String Matches
     for pattern in MALICIOUS_PATTERNS:
         if pattern.lower() in content_lower:
             found_patterns.append(pattern)
-            
-    # 2. Regex Checks for SQL Injection (f-strings with SQL keywords)
-    # Detects: f"SELECT ... {var}" or f'INSERT ... {var}'
+
     if len(content) > 50_000:
         content = content[:50_000]
+
+    # 2. Python f-string SQL injection: f"SELECT...{var}"
     sql_fstring_regex = re.compile(
         r'f["\'][^\n]{0,200}(SELECT|INSERT|UPDATE|DELETE|DROP)[^\n]{0,200}\{[^\n]{0,100}\}',
         re.IGNORECASE
     )
     if sql_fstring_regex.search(content):
         found_patterns.append('Direct SQL F-String Interpolation')
+
+    # 3. Java/any-language string concatenation SQL injection: "SELECT..." + var
+    sql_concat_regex = re.compile(
+        r'["\'][^\n]{0,200}(SELECT|INSERT|UPDATE|DELETE|DROP)[^\n]{0,200}["\'\s]*\+\s*\w',
+        re.IGNORECASE
+    )
+    if sql_concat_regex.search(content):
+        found_patterns.append('SQL String Concatenation (Injection Risk)')
 
     return found_patterns
 
@@ -340,11 +349,31 @@ def analyze_code():
                     "Clean scan. Did you actually write this or copy it from a senior dev?",
                 ])
 
+    # Detect language from filename hint or code heuristics
+    filename = data.get('filename', '') or ''
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    _EXT_LANG = {'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'java': 'java',
+                 'go': 'go', 'rs': 'rust', 'c': 'c', 'cpp': 'cpp', 'cs': 'csharp',
+                 'rb': 'ruby', 'php': 'php', 'kt': 'kotlin', 'swift': 'swift'}
+    detected_lang = _EXT_LANG.get(ext, 'unknown')
+    if detected_lang == 'unknown':
+        if 'def ' in code and 'import ' in code: detected_lang = 'python'
+        elif 'String ' in code and ';' in code: detected_lang = 'java'
+        elif 'function ' in code and ('const ' in code or 'var ' in code): detected_lang = 'javascript'
+        elif 'fn ' in code and 'let ' in code: detected_lang = 'rust'
+        elif 'func ' in code and ':=' in code: detected_lang = 'go'
+
     return jsonify({
         'malicious': is_malicious,
         'reason': reason,
-        'confidence': 0.95 if is_malicious else 0.99,
-        'risk_level': 'CRITICAL' if is_malicious else 'LOW'
+        'confidence': 95.0 if is_malicious else 99.0,
+        'risk_level': 'CRITICAL' if is_malicious else 'LOW',
+        'language': detected_lang,
+        'vulnerabilities': [{'pattern': p, 'severity': 'HIGH', 'line': 0,
+                             'description': p, 'cwe': 'CWE-89', 'category': 'Injection',
+                             'fix_hint': 'Use parameterized queries', 'snippet': ''}
+                            for p in patterns],
+        'metadata': {'nodes_scanned': len(code.splitlines()), 'engine': 'Kyber Pattern v1', 'process_time': 'Real-time'},
     })
 
 @app.route('/scan-repo', methods=['POST'])

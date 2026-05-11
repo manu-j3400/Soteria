@@ -50,6 +50,7 @@ const CODE_PATTERNS: Array<[RegExp, string]> = [
   [/\bfun\s+\w+\s*\(|\bval\s+\w+|\bdata\s+class\b|\bsuspend\s+fun\b/m, 'kotlin'],
   [/\bimport\s+(Foundation|UIKit|SwiftUI)\b|\bvar\s+body\s*:\s*some\s+View\b|@State\s+/m, 'swift'],
   [/\bpublic\s+(class|interface|enum)\s+\w+|\bSystem\.out\.println\b|\bimport\s+java\./m, 'java'],
+  [/\bString\s+\w+\s*=|\bResultSet\b|\bPreparedStatement\b|\bexecuteQuery\b|\brequest\.getParameter\b|\bStatement\b.*\bexecute/m, 'java'],
   [/\busing\s+System;|\bnamespace\s+\w+|\bConsole\.Write(Line)?\s*\(/m, 'csharp'],
   [/\bfrom\s+\w+\s+import\b|\bdef\s+\w+\s*\(|\bself\.\w+|\belif\b|\b__\w+__\b/m, 'python'],
   [/\bconst\s+\w+\s*=\s*(require\s*\(|async\s*\()|\bexport\s+default\b|\bdocument\./m, 'javascript'],
@@ -224,17 +225,23 @@ export default function Scanner() {
       const data = await res.json();
       const verdict = data.malicious ? 'malicious' : 'clean';
       addXp(10); if (verdict === 'clean') addXp(50);
+      // Normalize confidence: backend may return 0-1 fraction or 0-100 percentage
+      const rawConf = data.confidence ?? 0;
+      const normalizedConf = rawConf <= 1 ? Math.round(rawConf * 100 * 10) / 10 : rawConf;
       const item: HistoryItem = {
         id: Date.now().toString(),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         verdict, riskLevel: data.risk_level,
         codePreview: code.trim().substring(0, 35) + '…',
         fullCode: code, language: data.language,
-        confidence: data.confidence, nodesScanned: data.metadata?.nodes_scanned
+        confidence: normalizedConf, nodesScanned: data.metadata?.nodes_scanned
       };
       setHistory(prev => [item, ...prev].slice(0, 15));
+      // Normalize confidence: backend may return 0-1 fraction or 0-100 percentage
+      const rawConf = data.confidence ?? 0;
+      const normalizedConf = rawConf <= 1 ? Math.round(rawConf * 100 * 10) / 10 : rawConf;
       setResult({
-        status: verdict, message: data.reason, confidence: data.confidence,
+        status: verdict, message: data.reason, confidence: normalizedConf,
         riskLevel: data.risk_level, language: data.language, summary: data.summary,
         metadata: data.metadata, vulnerabilities: data.vulnerabilities
       });
@@ -673,7 +680,7 @@ export default function Scanner() {
                       {result.status === 'malicious' ? 'THREAT DETECTED' : 'CLEAN'}
                     </div>
                     <div style={{ fontSize: 10, color: C.subdued, marginTop: 4 }}>
-                      {result.riskLevel} RISK · {result.language?.toUpperCase()}
+                      {result.riskLevel} RISK · {(result.language || (editorLang !== 'plaintext' ? editorLang : '')).toUpperCase()}
                     </div>
                   </div>
 
