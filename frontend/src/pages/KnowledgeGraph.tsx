@@ -245,7 +245,7 @@ export default function KnowledgeGraph() {
 
             {/* Graph canvas */}
             {totalScans > 0 && (
-                <div style={{ width: '100%', height: '100vh', paddingTop: 36 }}>
+                <div style={{ width: '100%', height: '100%', paddingTop: 36 }}>
                     <ForceGraph2D
                         ref={fgRef}
                         graphData={graphData}

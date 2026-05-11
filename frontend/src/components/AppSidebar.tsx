@@ -16,12 +16,12 @@ const NAV = [
 ];
 
 const S = {
-  sidebar:   { background: '#000', borderRight: '1px solid #141414', fontFamily: "'JetBrains Mono', monospace" },
-  topBorder: { borderBottom: '1px solid #141414' },
-  midBorder: { borderBottom: '1px solid #0D0D0D' },
-  botBorder: { borderTop: '1px solid #141414' },
+  sidebar:   { background: '#000', borderRight: `1px solid ${COLORS.border}`, fontFamily: "'JetBrains Mono', monospace" },
+  topBorder: { borderBottom: `1px solid ${COLORS.border}` },
+  midBorder: { borderBottom: `1px solid ${COLORS.border2}` },
+  botBorder: { borderTop: `1px solid ${COLORS.border}` },
   pill:      { background: COLORS.acid, color: '#000', borderRadius: 0 },
-  pillHover: { background: '#C4FF52', color: '#000', borderRadius: 0 },
+  pillHover: { background: COLORS.acidDim, color: '#000', borderRadius: 0 },
 } as const;
 
 export default function AppSidebar() {
@@ -47,8 +47,8 @@ export default function AppSidebar() {
           style={{
             color: COLORS.acid,
             padding: '3px 8px',
-            background: 'rgba(173,255,47,0.08)',
-            border: '1px solid rgba(173,255,47,0.25)',
+            background: 'rgba(255,255,255,0.05)',
+            border: `1px solid ${COLORS.border2}`,
             display: 'inline-flex',
           }}
         >
@@ -64,7 +64,7 @@ export default function AppSidebar() {
           return (
             <Link key={to} to={to}
               className="relative flex items-center gap-3 px-5 py-[11px] text-[11px] font-bold tracking-[0.06em] transition-all duration-100 no-underline"
-              style={{ color: active ? COLORS.text : '#505050', background: active ? '#080808' : 'transparent' }}>
+              style={{ color: active ? COLORS.text : COLORS.sub, background: active ? COLORS.surface : 'transparent' }}>
               {active && (
                 <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: COLORS.acid }} />
               )}

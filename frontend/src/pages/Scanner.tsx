@@ -315,7 +315,7 @@ export default function Scanner() {
   return (
     <div
       style={{
-        display: 'flex', flexDirection: 'column', height: '100vh',
+        display: 'flex', flexDirection: 'column', height: '100%',
         background: '#000', fontFamily: "'JetBrains Mono', monospace",
         color: C.text, overflow: 'hidden',
       }}
