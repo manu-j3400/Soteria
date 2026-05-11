@@ -327,7 +327,7 @@ export default function Scanner() {
         fontSize: '10px', letterSpacing: '0.08em',
       }}>
         <Cell style={{ color: statusColor, minWidth: 160, fontWeight: 700 }}>{statusLabel}</Cell>
-        <Cell>LANG: <span style={{ color: C.text }}>{editorLang.toUpperCase()}</span></Cell>
+        <Cell>LANG: <span style={{ color: editorLang === 'plaintext' ? C.subdued : C.text }}>{editorLang === 'plaintext' ? '---' : editorLang.toUpperCase()}</span></Cell>
         <Cell>LINES: <span style={{ color: C.text }}>{lineCount}</span></Cell>
         <Cell>CHARS: <span style={{ color: C.text }}>{charCount.toLocaleString()}</span></Cell>
         {result.confidence != null && hasResults && (
@@ -509,9 +509,10 @@ export default function Scanner() {
               disabled={!code.trim() || result.status === 'loading'}
               style={{
                 height: '100%', flex: '0 0 auto', padding: '0 24px',
-                background: code.trim() && result.status !== 'loading' ? C.acid : C.dim,
+                background: code.trim() && result.status !== 'loading' ? C.acid : 'transparent',
                 border: 'none', borderRight: `1px solid ${C.border}`,
-                color: code.trim() && result.status !== 'loading' ? '#000' : C.muted,
+                outline: code.trim() || result.status === 'loading' ? 'none' : `1px solid ${C.border}`,
+                color: code.trim() && result.status !== 'loading' ? '#000' : C.subdued,
                 fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                 fontWeight: 700, letterSpacing: '0.1em', cursor: code.trim() ? 'pointer' : 'not-allowed',
                 transition: 'background 0.15s, color 0.15s',
