@@ -522,11 +522,9 @@ def _extract_instruction(payload):
     )[:2000]
 
 def _require_json_body():
-    """Ensure request body is a JSON object."""
+    """Ensure request body is a JSON object. Returns (data, is_valid)."""
     data = request.get_json(silent=True)
-    if not isinstance(data, dict):
-        return None, (jsonify({'error': 'Request body must be a valid JSON object'}), 400)
-    return data, None
+    return data, isinstance(data, dict)
 
 def _clean_text(value, max_len=None, lower=False):
     """Basic sanitization for user-provided text fields."""
@@ -727,7 +725,15 @@ def init_users_db():
         )
         conn.commit()
         if is_random:
-            print(f"WARNING: ADMIN_PASSWORD not set — generated random password: {admin_password} (save this, shown once)")
+            # Write generated password to a root-only file; never log it in plaintext
+            _pw_file = os.path.join(os.path.dirname(__file__), '.admin_pw')
+            try:
+                with open(_pw_file, 'w') as _f:
+                    _f.write(admin_password)
+                os.chmod(_pw_file, 0o600)
+                print(f"WARNING: ADMIN_PASSWORD not set — generated password written to {_pw_file} (chmod 600, read once)")
+            except OSError:
+                print("WARNING: ADMIN_PASSWORD not set and could not write password file — set ADMIN_PASSWORD env var")
         else:
             print("Default admin seeded (admin@soteria.dev / [from ADMIN_PASSWORD env])")
     
@@ -829,9 +835,9 @@ def auth_signup():
       400: {description: Validation error}
       409: {description: Email already registered}
     """
-    data, error = _require_json_body()
-    if error:
-        return error
+    data, valid = _require_json_body()
+    if not valid:
+        return jsonify({'error': 'Request body must be a valid JSON object'}), 400
     name = _clean_text(data.get('name'), max_len=120)
     email = _clean_text(data.get('email'), max_len=255, lower=True)
     password = _clean_text(data.get('password'), max_len=256)
@@ -891,9 +897,9 @@ def auth_login():
       200: {description: Login successful, schema: {type: object, properties: {token: {type: string}, user: {type: object}}}}
       401: {description: Invalid credentials}
     """
-    data, error = _require_json_body()
-    if error:
-        return error
+    data, valid = _require_json_body()
+    if not valid:
+        return jsonify({'error': 'Request body must be a valid JSON object'}), 400
     email = _clean_text(data.get('email'), max_len=255, lower=True)
     password = _clean_text(data.get('password'), max_len=256)
 
@@ -993,9 +999,9 @@ def auth_me():
 @app.route('/api/auth/admin/login', methods=['POST'])
 @rate_limit(max_requests=5, window_seconds=300) # 5 admin login attempts per 5 minutes
 def auth_admin_login():
-    data, error = _require_json_body()
-    if error:
-        return error
+    data, valid = _require_json_body()
+    if not valid:
+        return jsonify({'error': 'Request body must be a valid JSON object'}), 400
     email = _clean_text(data.get('email'), max_len=255, lower=True)
     password = _clean_text(data.get('password'), max_len=256)
 
@@ -1644,6 +1650,40 @@ def analyze(current_user):
                     'category': _cwe_to_category(cwe),
                     'fix_hint': _cwe_to_fix_hint(cwe),
                     'snippet': line_text.strip()[:100]
+                })
+
+    # REGEX SCAN — semantic patterns not expressible as literal strings
+    import re as _re
+    if detected_language in ('c', 'cpp'):
+        # CWE-457: Uninitialized variable — declaration without assignment
+        _uninit_re = _re.compile(
+            r'^\s*(?:unsigned\s+)?(?:int|long|char|short|float|double|size_t|uint\d*_t|int\d*_t|bool)\s+(\w+)\s*;',
+            _re.MULTILINE
+        )
+        _decl_names = {}
+        for _m in _uninit_re.finditer(codeInput):
+            _ln = codeInput[:_m.start()].count('\n') + 1
+            _decl_names[_m.group(1)] = _ln
+
+        for _var, _decl_ln in _decl_names.items():
+            # Flag only if variable is used in arithmetic/assignment after declaration
+            _use_re = _re.compile(r'\b' + _re.escape(_var) + r'\s*[\+\-\*\/]')
+            if _use_re.search(codeInput):
+                vulnerabilities.append({
+                    'line':        _decl_ln,
+                    'pattern':     f'{_var} (uninitialized)',
+                    'severity':    'HIGH',
+                    'description': (
+                        f"Variable '{_var}' declared without initialization "
+                        f"then used in arithmetic — contains indeterminate value (UB)"
+                    ),
+                    'cwe':         'CWE-457',
+                    'category':    'Memory Safety',
+                    'fix_hint':    'Initialize all variables at declaration: int x = 0;',
+                    'snippet':     next(
+                        (l.strip()[:100] for l in codeInput.split('\n')[_decl_ln-1:_decl_ln]),
+                        ''
+                    ),
                 })
 
     # SNN temporal anomaly (Kyber Engine 3) — CWE-506: Embedded Malicious Code

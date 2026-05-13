@@ -58,6 +58,8 @@ const CODE_PATTERNS: Array<[RegExp, string]> = [
   [/\becho\s+["']|\bfunction\s+\w+\s*\(\)\s*{.*\$\w+|^\s*\$\w+=/ms, 'php'],
   [/\bdef\s+\w+|\bputs\s+|\battr_(accessor|reader)\b|\.each\s+do\s*\|/m, 'ruby'],
   [/^#!/m, 'shell'],
+  [/\bchar\s+\w+\s*\[|\bstrcpy\s*\(|\bstrcat\s*\(|\bsprintf\s*\(|\bprintf\s*\(|\bmalloc\s*\(|\bNULL\b.*[;{]|\bchar\s*\*\w/m, 'c'],
+  [/#include\s*<\w+\.h>|\bint\s+main\s*\(|\bstd::|\bcout\s*<</m, 'cpp'],
 ];
 
 function detectEditorLang(backendLang: string | undefined, filename: string, code: string): string {
@@ -237,9 +239,6 @@ export default function Scanner() {
         confidence: normalizedConf, nodesScanned: data.metadata?.nodes_scanned
       };
       setHistory(prev => [item, ...prev].slice(0, 15));
-      // Normalize confidence: backend may return 0-1 fraction or 0-100 percentage
-      const rawConf = data.confidence ?? 0;
-      const normalizedConf = rawConf <= 1 ? Math.round(rawConf * 100 * 10) / 10 : rawConf;
       setResult({
         status: verdict, message: data.reason, confidence: normalizedConf,
         riskLevel: data.risk_level, language: data.language, summary: data.summary,
