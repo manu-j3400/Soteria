@@ -253,10 +253,15 @@ export default function Scanner() {
   };
 
   const startDeepScan = async () => {
+    if (!token) {
+      setDeepScanStatus('error');
+      setLlmOutput('AI Analysis requires an account. Please log in or sign up to use this feature.');
+      setActiveTab('analysis');
+      return;
+    }
     setDeepScanStatus('scanning'); setLlmOutput(''); setActiveTab('analysis'); llmOutputRef.current = '';
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
       const res = await fetch(`${API_BASE_URL}/deep-scan`, {
         method: 'POST', headers,
         body: JSON.stringify({ code, scan_result: { risk_level: result.riskLevel, confidence: result.confidence, reason: result.message } })

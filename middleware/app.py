@@ -337,7 +337,12 @@ except ImportError:
 allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://www.trysoteria.live,https://trysoteria.live,https://codebasesentinel.vercel.app,https://codebasesentinel-n2ikfeqq5-manu-j3400s-projects.vercel.app')
 allowed_origins = [origin.strip() for origin in allowed_origins_env.split(',') if origin.strip()]
 # Add support for vercel preview branches using regex if needed, but explicit list is safer
-CORS(app, resources={r"/*": {'origins': allowed_origins}})
+CORS(app, resources={r"/*": {
+    'origins': allowed_origins,
+    'allow_headers': ['Content-Type', 'Authorization'],
+    'methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    'supports_credentials': True,
+}})
 
 # ── STRUCTURED LOGGING WITH REQUEST IDs ──────────────────────────────────────
 
@@ -2762,6 +2767,10 @@ Provide your security analysis with vulnerability explanations and a fixed versi
 
     def generate():
         try:
+            # Heartbeat: establish SSE connection before any blocking I/O so
+            # reverse proxies (Render, nginx) don't drop the connection on first-byte timeout.
+            yield ": heartbeat\n\n"
+
             # Stream from Gemini API
             api_key = os.environ.get('GEMINI_API_KEY')
             if not api_key:
