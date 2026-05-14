@@ -52,7 +52,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.9.2",
     "input-otp": "^1.4.2",
-    "lucide-react": "^0.503.0",
+    "lucide-react": "^1.16.0",
     "motion-dom": "12.22.0",
     "motion-utils": "12.19.0",
     "posthog-js": "^1.357.1",
