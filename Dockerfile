@@ -24,4 +24,4 @@ EXPOSE 5001
 # Start the Flask app via gunicorn.
 # $PORT is automatically set by cloud platforms (Render, Railway, Heroku).
 # Falls back to 5001 for local Docker usage.
-CMD gunicorn --bind 0.0.0.0:${PORT:-5001} --workers 2 --timeout 120 middleware.app:app
+CMD gunicorn --bind 0.0.0.0:${PORT:-5001} --workers 1 --timeout 120 --preload middleware.app:app
