@@ -581,6 +581,8 @@ def get_db_connection(readonly=False):
 _SCAN_DB_MIGRATIONS = [
     (1, 'ALTER TABLE scans ADD COLUMN user_id INTEGER'),
     (2, 'ALTER TABLE training_data ADD COLUMN user_id INTEGER DEFAULT NULL'),
+    (3, 'ALTER TABLE scans ADD COLUMN features TEXT'),
+    (4, 'ALTER TABLE scans ADD COLUMN user_label INTEGER'),
 ]
 
 
@@ -1070,23 +1072,28 @@ def admin_users(current_user):
 
 
 def save_scan_result(user_id=None, language=None, risk_level=None, confidence=None,
-                     malicious=None, code="", nodes_scanned=0, reason=""):
-    """Save a scan result to the history database (thread-safe)."""
+                     malicious=None, code="", nodes_scanned=0, reason="", features=None):
+    """Save a scan result to the history database (thread-safe). Returns scan row id."""
+    import json as _json
     try:
         code_hash = hashlib.sha256(code.encode()).hexdigest()[:16]
+        features_blob = _json.dumps(features) if features else None
         with _db_lock:
             conn = get_db_connection()
             c = conn.cursor()
             c.execute(
                 'INSERT INTO scans (user_id, timestamp, language, risk_level, confidence, '
-                'malicious, code_hash, nodes_scanned, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'malicious, code_hash, nodes_scanned, reason, features) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (user_id, datetime.now().isoformat(), language, risk_level, confidence,
-                 1 if malicious else 0, code_hash, nodes_scanned, reason)
+                 1 if malicious else 0, code_hash, nodes_scanned, reason, features_blob)
             )
             conn.commit()
+            scan_id = c.lastrowid
             conn.close()
+        return scan_id
     except Exception as e:
         print(f"Failed to save scan result: {e}")
+        return None
 
 def load_model_if_updated():
     global model, lastModelTime
@@ -1748,7 +1755,24 @@ def analyze(current_user):
     # Auto-save to scan history if logged in
     user_id = current_user['user_id'] if current_user else None
 
-    save_scan_result(
+    _features = {
+        'max_entropy':           counts.get('max_entropy', 0),
+        'mean_entropy':          counts.get('mean_entropy', 0),
+        'n_high_entropy_nodes':  counts.get('n_high_entropy_nodes', 0),
+        'cyclomatic_complexity': counts.get('cyclomatic_complexity', 0),
+        'n_dangerous_calls':     counts.get('n_dangerous_calls', 0),
+        'n_suspicious_imports':  counts.get('n_suspicious_imports', 0),
+        'import_count':          counts.get('import_count', 0),
+        'n_sql_sink_calls':      counts.get('n_sql_sink_calls', 0),
+        'has_sql_concat':        counts.get('has_sql_concat', 0),
+        'n_user_input_sources':  counts.get('n_user_input_sources', 0),
+        'taint_reaches_sql':     counts.get('taint_reaches_sql', 0),
+        'taint_reaches_shell':   counts.get('taint_reaches_shell', 0),
+        'gcn_prob':              result.get('metadata', {}).get('gcn_probability'),
+        'rf_confidence':         confidence,
+    }
+
+    scan_id = save_scan_result(
         user_id=user_id,
         language=detected_language,
         risk_level=riskLabel,
@@ -1756,8 +1780,10 @@ def analyze(current_user):
         malicious=verdict,
         code=codeInput,
         nodes_scanned=len(featuresDf.columns),
-        reason=message
+        reason=message,
+        features=_features,
     )
+    result['scan_id'] = scan_id
 
     # Populate 24h result cache
     with _result_cache_lock:
@@ -2029,6 +2055,43 @@ def generateReport(current_user):
         as_attachment=True,
         download_name=f"Soteria_Security_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     )
+
+@app.route('/api/feedback', methods=['POST'])
+@token_required(optional=False)
+def api_submit_feedback(current_user):
+    """
+    Submit user feedback on a scan verdict.
+    ---
+    tags: [Feedback]
+    security: [{Bearer: []}]
+    parameters:
+      - in: body
+        schema:
+          type: object
+          required: [scan_id, correct]
+          properties:
+            scan_id: {type: integer}
+            correct:  {type: boolean}
+    responses:
+      200: {description: Feedback recorded}
+      400: {description: Missing fields}
+    """
+    data = request.get_json(silent=True) or {}
+    scan_id = data.get('scan_id')
+    correct  = data.get('correct')
+    if scan_id is None or correct is None:
+        return jsonify({'error': 'scan_id and correct required'}), 400
+    label = 1 if correct else 0
+    with _db_lock:
+        conn = get_db_connection()
+        conn.execute(
+            'UPDATE scans SET user_label=? WHERE id=? AND user_id=?',
+            (label, scan_id, current_user['user_id'])
+        )
+        conn.commit()
+        conn.close()
+    return jsonify({'ok': True})
+
 
 @app.route('/scan-history', methods=['GET'])
 @token_required(optional=True)
@@ -2728,13 +2791,6 @@ _CWE_INFO = {
     'CWE-330': ('Use of Insufficiently Random Values', 'Predictable tokens enable session hijacking, CSRF bypass, or collision attacks.'),
 }
 
-_C_FIXES = [
-    (re.compile(r'\bstrcpy\s*\('), 'strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]=\'\\0\'; // was strcpy'),
-    (re.compile(r'\bstrcat\s*\('), 'strncat(dst, src, sizeof(dst)-strlen(dst)-1); // was strcat'),
-    (re.compile(r'\bsprintf\s*\('), 'snprintf(buf, sizeof(buf), fmt, ...); // was sprintf'),
-    (re.compile(r'\bvsprintf\s*\('), 'vsnprintf(buf, sizeof(buf), fmt, ap); // was vsprintf'),
-    (re.compile(r'\bgets\s*\('), 'fgets(buf, sizeof(buf), stdin); // was gets'),
-]
 
 def _build_deep_report(code: str, vulnerabilities: list, language: str, risk_level: str, confidence: float) -> str:
     """Build a self-contained security report from Kyber engine output. No external API."""
@@ -2767,41 +2823,32 @@ def _build_deep_report(code: str, vulnerabilities: list, language: str, risk_lev
             unique_vulns.append(v)
 
     for i, v in enumerate(unique_vulns, 1):
-        sev   = v.get('severity', 'MEDIUM')
-        cwe   = v.get('cwe', '')
-        pat   = v.get('pattern', 'unknown pattern')
-        desc  = v.get('description', v.get('message', ''))
-        fix   = v.get('fix_hint', '')
-        lnum  = v.get('line', '?')
-        cat   = v.get('category', 'Security Issue')
+        sev     = v.get('severity', 'MEDIUM')
+        cwe     = v.get('cwe', '')
+        pat     = v.get('pattern', 'unknown pattern')
+        desc    = v.get('description', v.get('message', ''))
+        fix     = v.get('fix_hint', '')
+        lnum    = v.get('line', '?')
+        cat     = v.get('category', 'Security Issue')
+        snippet = v.get('snippet', '').strip()
 
         cwe_name, cwe_impact = _CWE_INFO.get(cwe, ('', ''))
         cwe_tag = f" ({cwe})" if cwe else ''
         cwe_name_str = f" — {cwe_name}" if cwe_name else ''
 
-        lines.append(f"### {i}. {cat}{cwe_tag}{cwe_name_str} — {sev}\n")
-        lines.append(f"**Line {lnum}**: `{pat}`\n")
+        lines.append(f"### {i}. {cat}{cwe_tag}{cwe_name_str} — {sev}  Line {lnum}\n")
+        lines.append(f"Pattern: `{pat}`\n")
         if desc:
             lines.append(f"{desc}\n")
         if cwe_impact:
             lines.append(f"**Impact**: {cwe_impact}\n")
+        # Inline before/after fix guidance
+        if snippet or fix:
+            vulnerable_line = snippet if snippet else pat
+            lines.append(f"```\n▸ Vulnerable:  {vulnerable_line}\n```\n")
         if fix:
-            lines.append(f"**Fix**: {fix}\n")
+            lines.append(f"```\n▸ Fix:         {fix}\n```\n")
         lines.append("")
-
-    # Attempt simple safe-code generation for C/C++
-    lines.append("---\n")
-    lines.append("## Fixed Code\n")
-
-    fixed = code
-    if language in ('c', 'cpp'):
-        for pattern, replacement in _C_FIXES:
-            if pattern.search(fixed):
-                fixed = pattern.sub(replacement, fixed)
-        lines.append(f"```{language}\n{fixed}\n```\n")
-    else:
-        lines.append(f"```{language}\n{code}\n```\n")
-        lines.append("*Automated fix not available for this language — apply the fix hints above manually.*\n")
 
     # Attack scenarios derived from CWEs found
     cwes_found = {v.get('cwe', '') for v in unique_vulns if v.get('cwe')}

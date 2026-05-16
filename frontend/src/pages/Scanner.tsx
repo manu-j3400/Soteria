@@ -82,7 +82,7 @@ interface VulnerabilityItem {
 interface AnalysisResult {
   status: 'waiting' | 'loading' | 'malicious' | 'clean' | 'error';
   message?: string; confidence?: number; riskLevel?: string;
-  language?: string; summary?: string;
+  language?: string; summary?: string; scanId?: number | null;
   metadata?: {
     nodes_scanned?: number;
     engine?: string;
@@ -106,7 +106,7 @@ interface HistoryItem {
   language?: string; confidence?: number; nodesScanned?: number;
 }
 type DeepScanStatus = 'idle' | 'scanning' | 'done' | 'error';
-type ResultTab = 'verdict' | 'analysis' | 'fix';
+type ResultTab = 'verdict' | 'analysis';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const TypewriterText = ({ text }: { text: string }) => {
@@ -121,13 +121,6 @@ const TypewriterText = ({ text }: { text: string }) => {
   return <span>{displayed}</span>;
 };
 
-function extractFixedCode(llmOutput: string): string | null {
-  const m = llmOutput.match(/## Fixed Code[\s\S]*?```(?:\w*)\n([\s\S]*?)```/);
-  if (m) return m[1].trim();
-  const m2 = llmOutput.match(/```(?:\w*)\n([\s\S]*?)```/);
-  if (m2) return m2[1].trim();
-  return null;
-}
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 import { COLORS } from '../theme/colors';
@@ -242,7 +235,8 @@ export default function Scanner() {
       setResult({
         status: verdict, message: data.reason, confidence: normalizedConf,
         riskLevel: data.risk_level, language: data.language, summary: data.summary,
-        metadata: data.metadata, vulnerabilities: data.vulnerabilities
+        metadata: data.metadata, vulnerabilities: data.vulnerabilities,
+        scanId: data.scan_id ?? null,
       });
       if (data.vulnerabilities) {
         const grps: Record<string, boolean> = {};
@@ -252,10 +246,19 @@ export default function Scanner() {
     } catch { setResult({ status: 'error', message: 'INTELLIGENCE LINK OFFLINE — check backend @ :5001' }); }
   };
 
+  const submitFeedback = async (correct: boolean) => {
+    if (!token || !result.scanId) return;
+    await fetch(`${API_BASE_URL}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ scan_id: result.scanId, correct }),
+    }).catch(() => {});
+  };
+
   const startDeepScan = async () => {
     if (!token) {
       setDeepScanStatus('error');
-      setLlmOutput('AI Analysis requires an account. Please log in or sign up to use this feature.');
+      setLlmOutput('Deep Scan requires an account. Please log in or sign up to use this feature.');
       setActiveTab('analysis');
       return;
     }
@@ -287,9 +290,6 @@ export default function Scanner() {
       }
     } catch (e) { setLlmOutput(`CONNECTION FAILED: ${e}`); setDeepScanStatus('error'); }
   };
-
-  const fixedCode = extractFixedCode(llmOutput);
-  const applyFix = () => { if (fixedCode) { setCode(fixedCode); setActiveTab('verdict'); } };
 
   const hasResults = result.status === 'malicious' || result.status === 'clean';
   const lineCount = code.split('\n').length;
@@ -549,8 +549,8 @@ export default function Scanner() {
                 onMouseEnter={e => { if (deepScanStatus !== 'scanning') e.currentTarget.style.color = C.acid; }}
                 onMouseLeave={e => { e.currentTarget.style.color = deepScanStatus === 'scanning' ? C.muted : C.text; }}
               >
-                {deepScanStatus === 'scanning' ? '[ AI SCANNING... ]'
-                  : deepScanStatus === 'done' ? '[ RE-ANALYZE AI ]'
+                {deepScanStatus === 'scanning' ? '[ SCANNING... ]'
+                  : deepScanStatus === 'done' ? '[ RE-SCAN ]'
                   : '[ DEEP SCAN ]'}
               </button>
             )}
@@ -591,8 +591,7 @@ export default function Scanner() {
             }}>
               {([
                 { key: 'verdict' as ResultTab, label: 'VERDICT' },
-                { key: 'analysis' as ResultTab, label: 'AI ANALYSIS', disabled: deepScanStatus === 'idle' },
-                { key: 'fix' as ResultTab, label: 'FIX', disabled: !fixedCode },
+                { key: 'analysis' as ResultTab, label: 'KYBER REPORT', disabled: deepScanStatus === 'idle' },
               ]).map(tab => (
                 <button
                   key={tab.key}
@@ -734,6 +733,27 @@ export default function Scanner() {
                     </div>
                   )}
 
+                  {/* User feedback */}
+                  {result.scanId && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8 }}>
+                      <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.1em', marginRight: 4, alignSelf: 'center' }}>
+                        VERDICT ACCURATE?
+                      </div>
+                      <button onClick={() => submitFeedback(true)}
+                        style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
+                                 color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                                 letterSpacing: '0.08em', cursor: 'pointer' }}>
+                        [ ✓ YES ]
+                      </button>
+                      <button onClick={() => submitFeedback(false)}
+                        style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
+                                 color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                                 letterSpacing: '0.08em', cursor: 'pointer' }}>
+                        [ ✗ WRONG ]
+                      </button>
+                    </div>
+                  )}
+
                   {/* Engine Signal Panel — GCN + SNN */}
                   {result.metadata && (result.metadata.gcn_probability != null || result.metadata.snn_temporal) && (
                     <div style={{ marginBottom: 20, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
@@ -806,7 +826,7 @@ export default function Scanner() {
                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.acid; e.currentTarget.style.color = C.acid; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.subdued; e.currentTarget.style.color = C.text; }}
                     >
-                      [ RUN DEEP SCAN + AI FIX ]
+                      [ RUN DEEP SCAN ]
                     </button>
                   )}
 
@@ -899,75 +919,16 @@ export default function Scanner() {
                   style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
                 >
                   <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.12em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>AI DEEP ANALYSIS</span>
+                    <span>KYBER DEEP ANALYSIS</span>
                     {deepScanStatus === 'done' && <span style={{ color: C.acid }}>[ COMPLETE ]</span>}
                   </div>
                   <div style={{ flex: 1, overflow: 'auto', background: C.dim, padding: 16, border: `1px solid ${C.border}` }}>
                     <pre style={{ fontSize: 10, color: C.text, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {llmOutput || (deepScanStatus === 'scanning' ? 'WAITING FOR AI RESPONSE...' : '')}
+                      {llmOutput || (deepScanStatus === 'scanning' ? 'RUNNING KYBER ANALYSIS...' : '')}
                       {deepScanStatus === 'scanning' && (
                         <span style={{ display: 'inline-block', width: 8, height: 14, background: C.acid, marginLeft: 2, verticalAlign: 'middle', animation: 'blink 0.8s step-end infinite' }} />
                       )}
                     </pre>
-                  </div>
-                  {deepScanStatus === 'done' && fixedCode && (
-                    <button
-                      onClick={() => setActiveTab('fix')}
-                      style={{
-                        marginTop: 12, padding: '10px 0', background: 'transparent',
-                        border: `1px solid ${C.acid}`, color: C.acid,
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-                        letterSpacing: '0.1em', cursor: 'pointer',
-                      }}
-                    >
-                      [ VIEW FIXED CODE → ]
-                    </button>
-                  )}
-                </motion.div>
-              )}
-
-              {/* FIX TAB */}
-              {hasResults && activeTab === 'fix' && fixedCode && (
-                <motion.div key="fix" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
-                >
-                  <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.12em', marginBottom: 12 }}>
-                    SUGGESTED FIX
-                  </div>
-                  <div style={{ flex: 1, overflow: 'auto', background: 'rgba(90,230,90,0.03)', border: `1px solid rgba(90,230,90,0.15)`, padding: 16 }}>
-                    <pre style={{ fontSize: 10, color: '#5AE65A', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {fixedCode}
-                    </pre>
-                  </div>
-                  <div style={{ display: 'flex', gap: 0, marginTop: 12 }}>
-                    <button
-                      onClick={applyFix}
-                      style={{
-                        flex: 1, padding: '10px 0', background: 'rgba(90,230,90,0.1)',
-                        border: `1px solid rgba(90,230,90,0.3)`, color: '#5AE65A',
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-                        letterSpacing: '0.1em', cursor: 'pointer', marginRight: 8,
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(90,230,90,0.2)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(90,230,90,0.1)')}
-                    >
-                      [ APPLY FIX ]
-                    </button>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(fixedCode)}
-                      style={{
-                        padding: '10px 20px', background: 'transparent',
-                        border: `1px solid ${C.border}`, color: C.subdued,
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-                        letterSpacing: '0.1em', cursor: 'pointer',
-                        transition: 'color 0.15s, border-color 0.15s',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.subdued; }}
-                      onMouseLeave={e => { e.currentTarget.style.color = C.subdued; e.currentTarget.style.borderColor = C.border; }}
-                    >
-                      [ COPY ]
-                    </button>
                   </div>
                 </motion.div>
               )}
