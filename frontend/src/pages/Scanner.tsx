@@ -264,7 +264,7 @@ export default function Scanner() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
       const res = await fetch(`${API_BASE_URL}/deep-scan`, {
         method: 'POST', headers,
-        body: JSON.stringify({ code, scan_result: { risk_level: result.riskLevel, confidence: result.confidence, reason: result.message } })
+        body: JSON.stringify({ code, vulnerabilities: result.vulnerabilities || [], scan_result: { risk_level: result.riskLevel, confidence: result.confidence, reason: result.message, language: result.language } })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const reader = res.body?.getReader();

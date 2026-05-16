@@ -2708,12 +2708,133 @@ def train_stream(current_user):
     return response
 
 
+_CWE_INFO = {
+    'CWE-120': ('Buffer Copy without Checking Size of Input', 'Allows attacker to overwrite adjacent memory, corrupt stack, hijack control flow.'),
+    'CWE-122': ('Heap-based Buffer Overflow', 'Overwrites heap metadata or adjacent allocations, enabling arbitrary code execution.'),
+    'CWE-89':  ('SQL Injection', 'Attacker injects SQL to dump, modify, or delete database contents, or bypass auth.'),
+    'CWE-79':  ('Cross-Site Scripting (XSS)', 'Attacker injects scripts into pages viewed by other users, stealing sessions or credentials.'),
+    'CWE-78':  ('OS Command Injection', 'Attacker injects shell commands executed with the server\'s privileges.'),
+    'CWE-22':  ('Path Traversal', 'Attacker reads or writes arbitrary files outside intended directory (e.g. ../../etc/passwd).'),
+    'CWE-326': ('Inadequate Encryption Strength', 'Weak cipher broken by brute-force or known attacks, exposing plaintext.'),
+    'CWE-327': ('Use of Broken Cryptographic Algorithm', 'Deprecated algorithm (MD5/SHA1/DES) provides no meaningful protection.'),
+    'CWE-312': ('Cleartext Storage of Sensitive Information', 'Credentials/keys visible in logs, files, or stdout — readable by anyone with access.'),
+    'CWE-798': ('Use of Hard-coded Credentials', 'Backdoor credentials ship with every deployment — trivially exploited.'),
+    'CWE-502': ('Deserialization of Untrusted Data', 'Attacker crafts malicious payload deserialized into arbitrary code execution.'),
+    'CWE-918': ('Server-Side Request Forgery (SSRF)', 'Server fetches attacker-controlled URLs, exposing internal services and cloud metadata.'),
+    'CWE-457': ('Use of Uninitialized Variable', 'Indeterminate stack value used in logic — unpredictable behavior, potential info leak.'),
+    'CWE-476': ('NULL Pointer Dereference', 'Crash or exploitable condition when pointer assumed non-null is actually null.'),
+    'CWE-190': ('Integer Overflow or Wraparound', 'Arithmetic overflow produces wrong size, leading to buffer allocation smaller than needed.'),
+    'CWE-295': ('Improper Certificate Validation', 'TLS cert not verified — trivial man-in-the-middle attack on encrypted channel.'),
+    'CWE-330': ('Use of Insufficiently Random Values', 'Predictable tokens enable session hijacking, CSRF bypass, or collision attacks.'),
+}
+
+_C_FIXES = [
+    (re.compile(r'\bstrcpy\s*\('), 'strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]=\'\\0\'; // was strcpy'),
+    (re.compile(r'\bstrcat\s*\('), 'strncat(dst, src, sizeof(dst)-strlen(dst)-1); // was strcat'),
+    (re.compile(r'\bsprintf\s*\('), 'snprintf(buf, sizeof(buf), fmt, ...); // was sprintf'),
+    (re.compile(r'\bvsprintf\s*\('), 'vsnprintf(buf, sizeof(buf), fmt, ap); // was vsprintf'),
+    (re.compile(r'\bgets\s*\('), 'fgets(buf, sizeof(buf), stdin); // was gets'),
+]
+
+def _build_deep_report(code: str, vulnerabilities: list, language: str, risk_level: str, confidence: float) -> str:
+    """Build a self-contained security report from Kyber engine output. No external API."""
+    import json as _json
+
+    lines = []
+
+    lines.append(f"## KYBER ENGINE — DEEP ANALYSIS REPORT\n")
+    lines.append(f"**Language**: {language.upper()}  |  **Risk**: {risk_level}  |  **Confidence**: {round(confidence)}%\n")
+    lines.append("---\n")
+
+    if not vulnerabilities:
+        lines.append("## No Vulnerabilities Detected\n")
+        lines.append("Kyber pattern engine found no known vulnerability signatures in this code.\n")
+        lines.append("This does not guarantee the code is secure — logic flaws and business-layer issues require manual review.\n")
+        return '\n'.join(lines)
+
+    # Group by severity
+    sev_order = {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
+    sorted_vulns = sorted(vulnerabilities, key=lambda v: sev_order.get(v.get('severity', 'LOW'), 3))
+
+    lines.append(f"## Vulnerabilities Found — {len(vulnerabilities)} Issue{'s' if len(vulnerabilities) != 1 else ''}\n")
+
+    seen_patterns: set = set()
+    unique_vulns = []
+    for v in sorted_vulns:
+        key = (v.get('pattern', ''), v.get('line', 0))
+        if key not in seen_patterns:
+            seen_patterns.add(key)
+            unique_vulns.append(v)
+
+    for i, v in enumerate(unique_vulns, 1):
+        sev   = v.get('severity', 'MEDIUM')
+        cwe   = v.get('cwe', '')
+        pat   = v.get('pattern', 'unknown pattern')
+        desc  = v.get('description', v.get('message', ''))
+        fix   = v.get('fix_hint', '')
+        lnum  = v.get('line', '?')
+        cat   = v.get('category', 'Security Issue')
+
+        cwe_name, cwe_impact = _CWE_INFO.get(cwe, ('', ''))
+        cwe_tag = f" ({cwe})" if cwe else ''
+        cwe_name_str = f" — {cwe_name}" if cwe_name else ''
+
+        lines.append(f"### {i}. {cat}{cwe_tag}{cwe_name_str} — {sev}\n")
+        lines.append(f"**Line {lnum}**: `{pat}`\n")
+        if desc:
+            lines.append(f"{desc}\n")
+        if cwe_impact:
+            lines.append(f"**Impact**: {cwe_impact}\n")
+        if fix:
+            lines.append(f"**Fix**: {fix}\n")
+        lines.append("")
+
+    # Attempt simple safe-code generation for C/C++
+    lines.append("---\n")
+    lines.append("## Fixed Code\n")
+
+    fixed = code
+    if language in ('c', 'cpp'):
+        for pattern, replacement in _C_FIXES:
+            if pattern.search(fixed):
+                fixed = pattern.sub(replacement, fixed)
+        lines.append(f"```{language}\n{fixed}\n```\n")
+    else:
+        lines.append(f"```{language}\n{code}\n```\n")
+        lines.append("*Automated fix not available for this language — apply the fix hints above manually.*\n")
+
+    # Attack scenarios derived from CWEs found
+    cwes_found = {v.get('cwe', '') for v in unique_vulns if v.get('cwe')}
+    if cwes_found:
+        lines.append("---\n")
+        lines.append("## Attack Scenarios\n")
+        for cwe in sorted(cwes_found):
+            _, impact = _CWE_INFO.get(cwe, ('', ''))
+            if impact:
+                lines.append(f"- **{cwe}**: {impact}\n")
+
+    lines.append("---\n")
+    lines.append("## Recommendations\n")
+    lines.append("1. Fix all CRITICAL and HIGH findings before any deployment.\n")
+    lines.append("2. Run Kyber re-scan after applying fixes to verify resolution.\n")
+    if language in ('c', 'cpp'):
+        lines.append("3. Compile with `-fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wformat-security`.\n")
+        lines.append("4. Consider static analysis tools: `cppcheck`, `clang-tidy`, `AddressSanitizer`.\n")
+    elif language == 'python':
+        lines.append("3. Use parameterized queries (never string-format SQL).\n")
+        lines.append("4. Run `bandit -r .` for additional Python-specific checks.\n")
+    elif language in ('javascript', 'typescript'):
+        lines.append("3. Sanitize all user input before rendering to DOM.\n")
+        lines.append("4. Use `npm audit` and `eslint-plugin-security`.\n")
+
+    return '\n'.join(lines)
+
+
 @app.route('/deep-scan', methods=['POST'])
 @token_required(optional=False)
 @rate_limit(max_requests=5, window_seconds=60)
 def deep_scan(current_user):
-    """LLM-powered deep scan that explains vulnerabilities and suggests fixes."""
-    import requests as req
+    """Kyber deep scan — self-contained security report, no external AI."""
     import json as json_mod
 
     data = request.get_json(silent=True) or {}
@@ -2722,106 +2843,45 @@ def deep_scan(current_user):
 
     if not code:
         return jsonify({'error': 'No code provided'}), 400
-
     if not isinstance(code, str):
         code = str(code)
-
     if len(code) > 50000:
         return jsonify({'error': 'Code too large for deep scan (50k limit)'}), 400
 
-    risk_level = scan_result.get('risk_level', 'UNKNOWN') if isinstance(scan_result, dict) else 'UNKNOWN'
-    reason = scan_result.get('reason', 'No initial analysis available') if isinstance(scan_result, dict) else 'Unknown'
-    language = scan_result.get('language', 'unknown') if isinstance(scan_result, dict) else 'unknown'
+    risk_level  = scan_result.get('risk_level', 'UNKNOWN') if isinstance(scan_result, dict) else 'UNKNOWN'
+    confidence  = float(scan_result.get('confidence', 50))  if isinstance(scan_result, dict) else 50.0
+    language    = scan_result.get('language', '')            if isinstance(scan_result, dict) else ''
+    vulnerabilities = data.get('vulnerabilities', [])
 
-    system_prompt = """You are Soteria, an expert security code auditor. You analyze code for vulnerabilities and provide fixes.
+    # Re-run pattern scan if caller didn't pass vulnerabilities
+    if not vulnerabilities:
+        try:
+            detected_language = language or _detect_language(code)
+            clean = strip_comments(code)
+            active_kw = {p for p in BUZZ_WORDS if p not in LANGUAGE_FILTER or detected_language in LANGUAGE_FILTER[p]}
+            triggered = [k for k in active_kw if k in clean]
+            for kw in triggered:
+                desc  = BUZZ_WORDS.get(kw, 'Suspicious pattern')
+                sev   = SEVERITY_LOOKUP.get(kw, 'MEDIUM')
+                cwe   = CWE_LOOKUP.get(kw, '')
+                ln    = next((i+1 for i, l in enumerate(code.splitlines()) if kw in l), 1)
+                vulnerabilities.append({
+                    'line': ln, 'pattern': kw, 'severity': sev,
+                    'description': desc, 'cwe': cwe,
+                    'category': 'Security Issue',
+                    'fix_hint': f'Remove or replace `{kw}` with a safe alternative.',
+                })
+            language = detected_language
+        except Exception:
+            pass
 
-RULES:
-1. Be concise but thorough
-2. Explain vulnerabilities in plain English that a student would understand
-3. Always provide a complete fixed version of the code
-4. Use this EXACT format:
-
-## Vulnerabilities Found
-
-[List each vulnerability with a brief explanation of WHY it's dangerous and what an attacker could do with it]
-
-## Fixed Code
-
-```
-[The complete corrected code with all vulnerabilities patched]
-```
-
-## What Changed
-
-[Brief bullet points explaining each fix]"""
-
-    user_prompt = f"""Analyze this {language} code. The initial scan flagged it as {risk_level} risk.
-Initial analysis: {reason}
-
-Code to analyze:
-```
-{code}
-```
-
-Provide your security analysis with vulnerability explanations and a fixed version."""
+    report = _build_deep_report(code, vulnerabilities, language or 'unknown', risk_level, confidence)
 
     def generate():
-        try:
-            # Heartbeat: establish SSE connection before any blocking I/O so
-            # reverse proxies (Render, nginx) don't drop the connection on first-byte timeout.
-            yield ": heartbeat\n\n"
-
-            # Stream from Qwen API (DashScope OpenAI-compatible endpoint)
-            api_key = os.environ.get('QWEN_API_KEY')
-            if not api_key:
-                yield f'data: {{"type": "error", "content": "Qwen API key not configured on server (set QWEN_API_KEY)."}}\n\n'
-                yield "data: [STREAM_END]\n\n"
-                return
-
-            url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-            resp = req.post(url, headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            }, json={
-                "model": "qwen-plus",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.2,
-                "stream": True,
-            }, stream=True, timeout=30)
-
-            if resp.status_code != 200:
-                err_content = resp.text.replace('\n', ' ').replace('"', "'")
-                yield f"data: {{\"type\": \"error\", \"content\": \"AI API error: {resp.status_code} {err_content}\"}}\n\n"
-                yield "data: [STREAM_END]\n\n"
-                return
-
-            for line in resp.iter_lines():
-                if line:
-                    line_str = line.decode('utf-8')
-                    if line_str.startswith('data: '):
-                        data_str = line_str[6:]
-                        if not data_str.strip() or data_str.strip() == '[DONE]':
-                            continue
-                        try:
-                            chunk = json_mod.loads(data_str)
-                            delta = chunk.get('choices', [{}])[0].get('delta', {})
-                            text = delta.get('content', '')
-                            if text:
-                                safe_token = json_mod.dumps(text)[1:-1]
-                                yield f"data: {{\"type\": \"token\", \"content\": \"{safe_token}\"}}\n\n"
-                        except Exception:
-                            continue
-
-        except req.exceptions.ConnectionError:
-            yield f'data: {{"type": "error", "content": "Qwen API is temporarily unavailable. The standard security analysis above still applies."}}\n\n'
-        except req.exceptions.Timeout:
-            yield f'data: {{"type": "error", "content": "AI analysis timed out. Please try again in a moment."}}\n\n'
-        except Exception as e:
-            yield f'data: {{"type": "error", "content": "AI analysis encountered an error. The standard scan results above are still valid."}}\n\n'
-
+        yield ": heartbeat\n\n"
+        for line in report.split('\n'):
+            safe = json_mod.dumps(line + '\n')[1:-1]
+            yield f'data: {{"type": "token", "content": "{safe}"}}\n\n'
         yield "data: [STREAM_END]\n\n"
 
     response = app.response_class(generate(), mimetype='text/event-stream')
