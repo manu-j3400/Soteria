@@ -2771,22 +2771,26 @@ Provide your security analysis with vulnerability explanations and a fixed versi
             # reverse proxies (Render, nginx) don't drop the connection on first-byte timeout.
             yield ": heartbeat\n\n"
 
-            # Stream from Gemini API
-            api_key = os.environ.get('GEMINI_API_KEY')
+            # Stream from Qwen API (DashScope OpenAI-compatible endpoint)
+            api_key = os.environ.get('QWEN_API_KEY')
             if not api_key:
-                yield f'data: {{"type": "error", "content": "Gemini API key not configured on server."}}\n\n'
+                yield f'data: {{"type": "error", "content": "Qwen API key not configured on server (set QWEN_API_KEY)."}}\n\n'
                 yield "data: [STREAM_END]\n\n"
                 return
-            
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:streamGenerateContent?alt=sse"
+
+            url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
             resp = req.post(url, headers={
                 "Content-Type": "application/json",
-                "x-goog-api-key": api_key,
+                "Authorization": f"Bearer {api_key}",
             }, json={
-                "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-                "generationConfig": {"temperature": 0.2}
-            }, stream=True, timeout=15)
+                "model": "qwen-plus",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.2,
+                "stream": True,
+            }, stream=True, timeout=30)
 
             if resp.status_code != 200:
                 err_content = resp.text.replace('\n', ' ').replace('"', "'")
@@ -2799,24 +2803,20 @@ Provide your security analysis with vulnerability explanations and a fixed versi
                     line_str = line.decode('utf-8')
                     if line_str.startswith('data: '):
                         data_str = line_str[6:]
-                        if not data_str.strip():
+                        if not data_str.strip() or data_str.strip() == '[DONE]':
                             continue
                         try:
                             chunk = json_mod.loads(data_str)
-                            if 'candidates' in chunk and len(chunk['candidates']) > 0:
-                                candidate = chunk['candidates'][0]
-                                if 'content' in candidate and 'parts' in candidate['content']:
-                                    parts = candidate['content']['parts']
-                                    if len(parts) > 0 and 'text' in parts[0]:
-                                        token = parts[0]['text']
-                                        if token:
-                                            safe_token = json_mod.dumps(token)[1:-1]
-                                            yield f"data: {{\"type\": \"token\", \"content\": \"{safe_token}\"}}\n\n"
+                            delta = chunk.get('choices', [{}])[0].get('delta', {})
+                            text = delta.get('content', '')
+                            if text:
+                                safe_token = json_mod.dumps(text)[1:-1]
+                                yield f"data: {{\"type\": \"token\", \"content\": \"{safe_token}\"}}\n\n"
                         except Exception:
                             continue
 
         except req.exceptions.ConnectionError:
-            yield f'data: {{"type": "error", "content": "Gemini API is temporarily unavailable. The standard security analysis above still applies."}}\n\n'
+            yield f'data: {{"type": "error", "content": "Qwen API is temporarily unavailable. The standard security analysis above still applies."}}\n\n'
         except req.exceptions.Timeout:
             yield f'data: {{"type": "error", "content": "AI analysis timed out. Please try again in a moment."}}\n\n'
         except Exception as e:
