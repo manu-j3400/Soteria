@@ -139,16 +139,16 @@ def _build_ensemble():
     from sklearn.preprocessing import StandardScaler
 
     rf = RandomForestClassifier(
-        n_estimators=300, max_depth=15,
-        min_samples_leaf=1, min_samples_split=2,
+        n_estimators=100, max_depth=10,
+        min_samples_leaf=2, min_samples_split=4,
         class_weight='balanced', random_state=42,
     )
     gb = GradientBoostingClassifier(
-        n_estimators=200, max_depth=5,
+        n_estimators=100, max_depth=4,
         learning_rate=0.1, random_state=42,
     )
     et = ExtraTreesClassifier(
-        n_estimators=300, max_depth=15,
+        n_estimators=100, max_depth=10,
         class_weight='balanced', random_state=42, n_jobs=-1,
     )
     lr_pipeline = Pipeline([
