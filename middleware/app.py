@@ -2524,6 +2524,92 @@ def set_webhook_setting(current_user):
         return jsonify({'error': 'Internal server error'}), 500
 
 
+# ── Online retraining state ───────────────────────────────────────────────────
+_retrain_state: dict = {'status': 'idle', 'result': None}
+_retrain_lock  = threading.Lock()
+
+
+@app.route('/api/admin/retrain', methods=['POST'])
+@token_required(optional=False)
+def trigger_retrain(current_user):
+    """
+    Kick off RF online retraining in a background thread.
+    Admin-only. Uses labeled scan rows accumulated since last retrain.
+    ---
+    tags: [Admin]
+    security: [{Bearer: []}]
+    parameters:
+      - in: body
+        schema:
+          type: object
+          properties:
+            dry_run:      {type: boolean, default: false}
+            min_samples:  {type: integer, default: 10}
+    responses:
+      202: {description: Retrain started}
+      400: {description: Already running}
+      403: {description: Admin only}
+    """
+    if not current_user.get('is_admin'):
+        return jsonify({'error': 'Admin access required'}), 403
+
+    with _retrain_lock:
+        if _retrain_state['status'] == 'running':
+            return jsonify({'error': 'Retrain already in progress'}), 400
+        _retrain_state['status'] = 'running'
+        _retrain_state['result'] = None
+
+    data      = request.get_json(silent=True) or {}
+    dry_run   = bool(data.get('dry_run', False))
+    min_samp  = int(data.get('min_samples', 10))
+
+    def _run():
+        try:
+            sys.path.insert(0, str(ROOT / 'backend' / 'src'))
+            from retrain_pipeline import run_retrain  # type: ignore[import]
+            res = run_retrain(min_new_samples=min_samp, dry_run=dry_run)
+            # If model was swapped, reload it
+            if res.get('swapped'):
+                load_model_if_updated()
+            with _retrain_lock:
+                _retrain_state['status'] = 'done'
+                _retrain_state['result'] = res
+        except Exception as exc:
+            with _retrain_lock:
+                _retrain_state['status'] = 'failed'
+                _retrain_state['result'] = {'status': 'error', 'reason': str(exc)}
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'status': 'started', 'dry_run': dry_run}), 202
+
+
+@app.route('/api/admin/retrain/status', methods=['GET'])
+@token_required(optional=False)
+def retrain_status(current_user):
+    """
+    Poll retrain job status.
+    ---
+    tags: [Admin]
+    security: [{Bearer: []}]
+    responses:
+      200:
+        description: Current retrain state
+        schema:
+          type: object
+          properties:
+            status: {type: string, enum: [idle, running, done, failed]}
+            result: {type: object}
+      403: {description: Admin only}
+    """
+    if not current_user.get('is_admin'):
+        return jsonify({'error': 'Admin access required'}), 403
+    with _retrain_lock:
+        return jsonify({
+            'status': _retrain_state['status'],
+            'result': _retrain_state['result'],
+        })
+
+
 @app.route('/api/model/drift', methods=['GET'])
 @token_required(optional=False)
 def model_drift(current_user):
@@ -2878,7 +2964,7 @@ def _build_deep_report(code: str, vulnerabilities: list, language: str, risk_lev
 
 
 @app.route('/deep-scan', methods=['POST'])
-@token_required(optional=False)
+@token_required(optional=True)
 @rate_limit(max_requests=5, window_seconds=60)
 def deep_scan(current_user):
     """Kyber deep scan — self-contained security report, no external AI."""

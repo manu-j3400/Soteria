@@ -243,6 +243,14 @@ export default function Scanner() {
         data.vulnerabilities.forEach((v: VulnerabilityItem) => { grps[v.category || 'Security Issue'] = true; });
         setExpandedGroups(grps);
       }
+      // Auto-run Kyber deep scan (self-contained, no external API)
+      startDeepScan({
+        vulnerabilities: data.vulnerabilities || [],
+        riskLevel: data.risk_level,
+        confidence: normalizedConf,
+        message: data.reason,
+        language: data.language,
+      });
     } catch { setResult({ status: 'error', message: 'INTELLIGENCE LINK OFFLINE — check backend @ :5001' }); }
   };
 
@@ -255,19 +263,21 @@ export default function Scanner() {
     }).catch(() => {});
   };
 
-  const startDeepScan = async () => {
-    if (!token) {
-      setDeepScanStatus('error');
-      setLlmOutput('Deep Scan requires an account. Please log in or sign up to use this feature.');
-      setActiveTab('analysis');
-      return;
-    }
-    setDeepScanStatus('scanning'); setLlmOutput(''); setActiveTab('analysis'); llmOutputRef.current = '';
+  const startDeepScan = async (scanData?: { vulnerabilities: VulnerabilityItem[]; riskLevel: string; confidence: number; message: string; language: string }) => {
+    setDeepScanStatus('scanning'); setLlmOutput(''); llmOutputRef.current = '';
+    const vulns      = scanData?.vulnerabilities ?? result.vulnerabilities ?? [];
+    const scanResult = {
+      risk_level: scanData?.riskLevel  ?? result.riskLevel,
+      confidence: scanData?.confidence ?? result.confidence,
+      reason:     scanData?.message    ?? result.message,
+      language:   scanData?.language   ?? result.language,
+    };
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API_BASE_URL}/deep-scan`, {
         method: 'POST', headers,
-        body: JSON.stringify({ code, vulnerabilities: result.vulnerabilities || [], scan_result: { risk_level: result.riskLevel, confidence: result.confidence, reason: result.message, language: result.language } })
+        body: JSON.stringify({ code, vulnerabilities: vulns, scan_result: scanResult })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const reader = res.body?.getReader();
@@ -532,26 +542,23 @@ export default function Scanner() {
               {result.status === 'loading' ? '[ SCANNING... ]' : '[ ANALYZE ]'}
             </button>
 
-            {/* DEEP SCAN button — appears after quick scan */}
-            {hasResults && (
+            {/* Re-run Kyber scan button — only when done/error */}
+            {hasResults && (deepScanStatus === 'done' || deepScanStatus === 'error') && (
               <button
-                onClick={startDeepScan}
-                disabled={deepScanStatus === 'scanning'}
+                onClick={() => startDeepScan()}
                 style={{
                   height: '100%', flex: '0 0 auto', padding: '0 20px',
                   background: 'transparent', border: 'none',
                   borderRight: `1px solid ${C.border}`,
-                  color: deepScanStatus === 'scanning' ? C.muted : C.text,
+                  color: C.text,
                   fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                  letterSpacing: '0.1em', cursor: deepScanStatus === 'scanning' ? 'not-allowed' : 'pointer',
+                  letterSpacing: '0.1em', cursor: 'pointer',
                   transition: 'color 0.15s',
                 }}
-                onMouseEnter={e => { if (deepScanStatus !== 'scanning') e.currentTarget.style.color = C.acid; }}
-                onMouseLeave={e => { e.currentTarget.style.color = deepScanStatus === 'scanning' ? C.muted : C.text; }}
+                onMouseEnter={e => { e.currentTarget.style.color = C.acid; }}
+                onMouseLeave={e => { e.currentTarget.style.color = C.text; }}
               >
-                {deepScanStatus === 'scanning' ? '[ SCANNING... ]'
-                  : deepScanStatus === 'done' ? '[ RE-SCAN ]'
-                  : '[ DEEP SCAN ]'}
+                [ RE-SCAN ]
               </button>
             )}
 
@@ -591,7 +598,7 @@ export default function Scanner() {
             }}>
               {([
                 { key: 'verdict' as ResultTab, label: 'VERDICT' },
-                { key: 'analysis' as ResultTab, label: 'KYBER REPORT', disabled: deepScanStatus === 'idle' },
+                { key: 'analysis' as ResultTab, label: 'KYBER REPORT', disabled: !hasResults },
               ]).map(tab => (
                 <button
                   key={tab.key}
@@ -633,7 +640,7 @@ export default function Scanner() {
                     <div style={{ marginTop: 16, color: C.muted }}>PASTE OR UPLOAD CODE TO BEGIN ANALYSIS</div>
                     <div style={{ color: C.muted }}>SUPPORTED: {SUPPORTED_EXTENSIONS.slice(0, 6).join(' ').toUpperCase()} + MORE</div>
                     <div style={{ marginTop: 16, color: C.muted }}>ENGINES: GCN · ENTROPY · SNN · PATTERN</div>
-                    <div style={{ color: C.muted }}>DEEP SCAN: LLM TRIAGE AVAILABLE AFTER QUICK SCAN</div>
+                    <div style={{ color: C.muted }}>DEEP SCAN: KYBER REPORT AUTO-GENERATES AFTER ANALYSIS</div>
                   </div>
                 </motion.div>
               )}
@@ -812,24 +819,6 @@ export default function Scanner() {
                     </div>
                   )}
 
-                  {/* AI Fix shortcut */}
-                  {result.status === 'malicious' && deepScanStatus === 'idle' && (
-                    <button
-                      onClick={startDeepScan}
-                      style={{
-                        width: '100%', padding: '10px 0', background: 'transparent',
-                        border: `1px solid ${C.subdued}`, color: C.text,
-                        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-                        letterSpacing: '0.1em', cursor: 'pointer', marginBottom: 20,
-                        transition: 'border-color 0.15s, color 0.15s',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = C.acid; e.currentTarget.style.color = C.acid; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.subdued; e.currentTarget.style.color = C.text; }}
-                    >
-                      [ RUN DEEP SCAN ]
-                    </button>
-                  )}
-
                   {/* Vuln groups */}
                   {sortedGroups.length > 0 && (
                     <div>
@@ -914,7 +903,7 @@ export default function Scanner() {
               )}
 
               {/* ANALYSIS TAB */}
-              {hasResults && activeTab === 'analysis' && deepScanStatus !== 'idle' && (
+              {hasResults && activeTab === 'analysis' && (
                 <motion.div key="analysis" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
                 >
