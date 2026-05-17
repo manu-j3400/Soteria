@@ -54,7 +54,7 @@ def _extract_features(code: str) -> dict[str, Any] | None:
 
 # ── Database helpers ──────────────────────────────────────────────────────────
 
-def _get_labeled_scans(db_path: Path) -> list[dict[str, Any]]:
+def _get_labeled_scans_inner(db_path: Path) -> list[dict[str, Any]]:
     """
     Return list of {code, label} for every labeled scan that has a matching
     code entry in training_data.
@@ -86,6 +86,15 @@ def _get_labeled_scans(db_path: Path) -> list[dict[str, Any]]:
             is_malicious = 1 - is_malicious
         samples.append({'code': r['code'], 'label': is_malicious})
     return samples
+
+
+def _get_labeled_scans(db_path: Path) -> list[dict[str, Any]]:
+    """Wrapper that returns [] if schema migrations haven't run yet."""
+    try:
+        return _get_labeled_scans_inner(db_path)
+    except Exception as e:
+        print(f'[retrain] Skipping labeled scans ({e})')
+        return []
 
 
 # ── Feature DataFrame builder ─────────────────────────────────────────────────
@@ -194,18 +203,22 @@ def run_retrain(
         result['reason'] = f'numericFeatures.csv not found: {csv_path}'
         return result
 
-    orig_df = pd.read_csv(csv_path)
-    # Merge CVE scraper output if available
+    # Feature columns are defined by the base CSV — must match the existing model
+    base_df = pd.read_csv(csv_path)
+    feature_cols = [c for c in base_df.columns if c not in ('LABEL', 'SOURCE')]
+
+    frames = [base_df]
+    # Merge CVE scraper output if available — restrict to same feature columns
     if cve_csv.exists():
         try:
             cve_df = pd.read_csv(cve_csv)
-            orig_df = pd.concat([orig_df, cve_df], ignore_index=True)
-            print(f'[retrain] Merged cve_features.csv: +{len(cve_df)} rows → {len(orig_df)} total')
+            frames.append(cve_df)
+            print(f'[retrain] Merged cve_features.csv: +{len(cve_df)} rows → {len(base_df) + len(cve_df)} total')
         except Exception as e:
             print(f'[retrain] Warning: could not load cve_features.csv: {e}')
 
-    feature_cols = [c for c in orig_df.columns if c not in ('LABEL', 'SOURCE')]
-    X_orig = orig_df[feature_cols].fillna(0)
+    orig_df = pd.concat(frames, ignore_index=True)
+    X_orig = orig_df.reindex(columns=feature_cols, fill_value=0).fillna(0)
     y_orig = orig_df['LABEL'].astype(int)
 
     # 2. Load labeled scans
@@ -219,16 +232,17 @@ def run_retrain(
         )
         return result
 
-    # 3. Extract features from new samples
-    X_new, y_new = _build_features_df(labeled, feature_cols)
-    if len(X_new) == 0:
-        result['reason'] = 'Feature extraction failed for all new samples (non-Python code?)'
-        return result
-    result['new_samples'] = len(X_new)
+    # 3. Extract features from new user-labeled samples (optional)
+    if labeled:
+        X_new, y_new = _build_features_df(labeled, feature_cols)
+        result['new_samples'] = len(X_new)
+        if len(X_new) > 0:
+            X_orig = pd.concat([X_orig, X_new], ignore_index=True)
+            y_orig = pd.concat([y_orig, y_new], ignore_index=True)
 
-    # 4. Merge
-    X_combined = pd.concat([X_orig, X_new], ignore_index=True)
-    y_combined = pd.concat([y_orig, y_new], ignore_index=True)
+    # 4. Combined dataset (orig CSV + CVE CSV + any user-labeled scans)
+    X_combined = X_orig
+    y_combined = y_orig
 
     # 5. Split — same ratio as original training
     X_train, X_test, y_train, y_test = train_test_split(
