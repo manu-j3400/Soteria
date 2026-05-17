@@ -91,81 +91,76 @@ _GITHUB_PR_RE = re.compile(
 )
 
 
-def _nvd_headers() -> dict:
-    h = {'Accept': 'application/json'}
-    if NVD_API_KEY:
-        h['apiKey'] = NVD_API_KEY
-    return h
-
-
-def iter_nvd_cves(
-    start_date: str = '2022-01-01',
-    end_date: str   = '2025-01-01',
+def iter_gh_advisories(
     severities: list[str] = None,
-    page_size: int = 2000,
+    page_size: int = 100,
 ) -> Iterator[dict]:
     """
-    Yield CVE dicts from NVD API v2 that have at least one GitHub commit reference.
+    Yield CVE dicts from GitHub Security Advisories API (pip ecosystem = Python).
+    Requires GITHUB_TOKEN. Much more reliable than NVD API.
     Each dict: {cve_id, severity, score, commit_urls: [(repo, sha), ...]}
     """
     if severities is None:
-        severities = ['HIGH', 'CRITICAL']
+        severities = ['high', 'critical']
+
+    headers = _gh_headers()
+    # GitHub advisories API uses a different accept header
+    headers['Accept'] = 'application/vnd.github+json'
 
     for severity in severities:
-        start_idx = 0
+        page = 1
         while True:
             url = (
-                f'{_NVD_BASE}'
-                f'?pubStartDate={start_date}T00:00:00.000'
-                f'&pubEndDate={end_date}T23:59:59.999'
-                f'&cvssV3Severity={severity}'
-                f'&resultsPerPage={page_size}'
-                f'&startIndex={start_idx}'
+                f'https://api.github.com/advisories'
+                f'?type=reviewed'
+                f'&severity={severity}'
+                f'&ecosystem=pip'
+                f'&per_page={page_size}'
+                f'&page={page}'
             )
-            data = _get(url, _nvd_headers(), delay=_NVD_DELAY)
-            if not data:
+            print(f'  [ghsa] {severity} page={page}', flush=True)
+            data = _get(url, headers, delay=_GITHUB_DELAY)
+            if not data or not isinstance(data, list) or len(data) == 0:
+                print(f'  [ghsa] no more results for {severity}', flush=True)
                 break
 
-            vulns = data.get('vulnerabilities', [])
-            if not vulns:
-                break
-
-            for item in vulns:
-                cve = item.get('cve', {})
-                cve_id = cve.get('id', '')
+            for item in data:
+                ghsa_id  = item.get('ghsa_id', '')
+                cve_id   = item.get('cve_id') or ghsa_id
+                sev      = item.get('severity', severity)
+                score    = item.get('cvss', {}).get('score', 0.0) if item.get('cvss') else 0.0
 
                 # Collect GitHub commit URLs from references
                 commit_urls: list[tuple[str, str]] = []
-                for ref in cve.get('references', []):
-                    url_str = ref.get('url', '')
-                    m = _GITHUB_COMMIT_RE.search(url_str)
+                for ref_url in (item.get('references') or []):
+                    m = _GITHUB_COMMIT_RE.search(ref_url)
+                    if m:
+                        commit_urls.append((m.group(1), m.group(2)))
+
+                # Also check vulnerabilities → patched_versions have associated repo
+                if not commit_urls:
+                    for vuln in (item.get('vulnerabilities') or []):
+                        repo_url = (vuln.get('package') or {}).get('ecosystem', '')
+                        # repo info sometimes in advisory source_code_url
+                    src_url = item.get('source_code_url') or ''
+                    m = _GITHUB_COMMIT_RE.search(src_url)
                     if m:
                         commit_urls.append((m.group(1), m.group(2)))
 
                 if not commit_urls:
                     continue
 
-                # Extract CVSS score
-                score = 0.0
-                metrics = cve.get('metrics', {})
-                for key in ('cvssMetricV31', 'cvssMetricV30', 'cvssMetricV2'):
-                    if key in metrics and metrics[key]:
-                        score = metrics[key][0].get('cvssData', {}).get('baseScore', 0.0)
-                        break
-
                 yield {
                     'cve_id': cve_id,
-                    'severity': severity,
+                    'severity': sev,
                     'score': score,
                     'commit_urls': commit_urls,
                 }
 
-            total = data.get('totalResults', 0)
-            start_idx += len(vulns)
-            if start_idx >= total:
+            print(f'  [ghsa] {severity} page {page}: {len(data)} advisories', flush=True)
+            if len(data) < page_size:
                 break
-
-            print(f'  [nvd] {severity}: fetched {start_idx}/{total}', flush=True)
+            page += 1
 
 
 # ── GitHub client ─────────────────────────────────────────────────────────────
@@ -384,7 +379,7 @@ def scrape(
     print(f'[cve_scraper] Output: {output}', flush=True)
     print(f'[cve_scraper] Limit: {limit} samples | {start_date} → {end_date}', flush=True)
 
-    for cve in iter_nvd_cves(start_date=start_date, end_date=end_date):
+    for cve in iter_gh_advisories():
         if stats['samples_written'] >= limit:
             break
 
