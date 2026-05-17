@@ -91,76 +91,93 @@ _GITHUB_PR_RE = re.compile(
 )
 
 
-def iter_gh_advisories(
-    severities: list[str] = None,
+# High-value Python repos with known security histories
+_PYTHON_SECURITY_REPOS = [
+    'django/django',
+    'pallets/flask',
+    'psf/requests',
+    'urllib3/urllib3',
+    'sqlalchemy/sqlalchemy',
+    'paramiko/paramiko',
+    'Pillow/Pillow',
+    'pyca/cryptography',
+    'aio-libs/aiohttp',
+    'twisted/twisted',
+    'encode/httpx',
+    'celery/celery',
+    'ansible/ansible',
+    'pypa/pip',
+    'jinja2/jinja',
+    'pallets/werkzeug',
+    'pycurl/pycurl',
+    'yaml/pyyaml',
+    'lxml/lxml',
+    'numpy/numpy',
+    'scipy/scipy',
+    'boto/boto3',
+    'gitpython-developers/GitPython',
+    'pyOpenSSL/pyOpenSSL',
+    'netaddr/netaddr',
+]
+
+# Commit message patterns that signal security fixes
+_SECURITY_PATTERNS = [
+    'CVE-', 'security fix', 'security patch', 'security issue',
+    'sql injection', 'xss', 'csrf', 'path traversal', 'directory traversal',
+    'remote code execution', 'rce', 'arbitrary code', 'buffer overflow',
+    'use after free', 'authentication bypass', 'privilege escalation',
+    'command injection', 'fix vulnerability', 'vuln fix', 'security advisory',
+]
+
+
+def iter_repo_security_commits(
+    repos: list[str] = None,
+    max_pages_per_repo: int = 10,
     page_size: int = 100,
 ) -> Iterator[dict]:
     """
-    Yield CVE dicts from GitHub Security Advisories API (pip ecosystem = Python).
-    Requires GITHUB_TOKEN. Much more reliable than NVD API.
-    Each dict: {cve_id, severity, score, commit_urls: [(repo, sha), ...]}
+    Scan known Python security repos for commits with security-related messages.
+    Much more targeted than paginating the global advisory API.
+    Each yielded dict: {cve_id, severity, score, commit_urls: [(repo, sha), ...]}
     """
-    if severities is None:
-        severities = ['high', 'critical']
+    if repos is None:
+        repos = _PYTHON_SECURITY_REPOS
 
     headers = _gh_headers()
-    # GitHub advisories API uses a different accept header
-    headers['Accept'] = 'application/vnd.github+json'
+    cve_re = re.compile(r'CVE-\d{4}-\d+', re.IGNORECASE)
 
-    for severity in severities:
-        page = 1
-        while True:
-            url = (
-                f'https://api.github.com/advisories'
-                f'?type=reviewed'
-                f'&severity={severity}'
-                f'&ecosystem=pip'
-                f'&per_page={page_size}'
-                f'&page={page}'
-            )
-            print(f'  [ghsa] {severity} page={page}', flush=True)
-            data = _get(url, headers, delay=_GITHUB_DELAY)
-            if not data or not isinstance(data, list) or len(data) == 0:
-                print(f'  [ghsa] no more results for {severity}', flush=True)
-                break
+    for repo in repos:
+        print(f'  [repo] scanning {repo}', flush=True)
+        for pattern in _SECURITY_PATTERNS[:6]:   # top 6 patterns per repo to stay fast
+            for page in range(1, max_pages_per_repo + 1):
+                url = (
+                    f'https://api.github.com/search/commits'
+                    f'?q={quote(pattern)}+repo:{repo}'
+                    f'&per_page={page_size}&page={page}'
+                )
+                data = _get(url, headers, delay=_GITHUB_DELAY)
+                if not data or not isinstance(data, dict):
+                    break
+                items = data.get('items', [])
+                if not items:
+                    break
 
-            for item in data:
-                ghsa_id  = item.get('ghsa_id', '')
-                cve_id   = item.get('cve_id') or ghsa_id
-                sev      = item.get('severity', severity)
-                score    = item.get('cvss', {}).get('score', 0.0) if item.get('cvss') else 0.0
+                for item in items:
+                    sha  = item.get('sha', '')
+                    msg  = (item.get('commit', {}).get('message', '') or '')
+                    cve_match = cve_re.search(msg)
+                    cve_id = cve_match.group(0).upper() if cve_match else f'sec_{sha[:8]}'
 
-                # Collect GitHub commit URLs from references
-                commit_urls: list[tuple[str, str]] = []
-                for ref_url in (item.get('references') or []):
-                    m = _GITHUB_COMMIT_RE.search(ref_url)
-                    if m:
-                        commit_urls.append((m.group(1), m.group(2)))
+                    yield {
+                        'cve_id': cve_id,
+                        'severity': 'high',
+                        'score': 0.0,
+                        'commit_urls': [(repo, sha)],
+                    }
 
-                # Also check vulnerabilities → patched_versions have associated repo
-                if not commit_urls:
-                    for vuln in (item.get('vulnerabilities') or []):
-                        repo_url = (vuln.get('package') or {}).get('ecosystem', '')
-                        # repo info sometimes in advisory source_code_url
-                    src_url = item.get('source_code_url') or ''
-                    m = _GITHUB_COMMIT_RE.search(src_url)
-                    if m:
-                        commit_urls.append((m.group(1), m.group(2)))
-
-                if not commit_urls:
-                    continue
-
-                yield {
-                    'cve_id': cve_id,
-                    'severity': sev,
-                    'score': score,
-                    'commit_urls': commit_urls,
-                }
-
-            print(f'  [ghsa] {severity} page {page}: {len(data)} advisories', flush=True)
-            if len(data) < page_size:
-                break
-            page += 1
+                # GitHub commit search caps at 1000 results total
+                if len(items) < page_size or page * page_size >= 1000:
+                    break
 
 
 # ── GitHub client ─────────────────────────────────────────────────────────────
@@ -379,7 +396,7 @@ def scrape(
     print(f'[cve_scraper] Output: {output}', flush=True)
     print(f'[cve_scraper] Limit: {limit} samples | {start_date} → {end_date}', flush=True)
 
-    for cve in iter_gh_advisories():
+    for cve in iter_repo_security_commits():
         if stats['samples_written'] >= limit:
             break
 
