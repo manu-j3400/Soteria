@@ -482,47 +482,10 @@ export default function Scanner() {
             <input ref={fileInputRef} type="file" accept={ACCEPT_STRING} onChange={handleFileInput} style={{ display: 'none' }} />
           </div>
 
-          {/* Editor */}
-          <div
-            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
-            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleFileDrop}
-          >
-            <CodeEditor
-              code={code}
-              setCode={setCode}
-              language={editorLang}
-              className="h-full"
-              vulnerabilities={result.vulnerabilities}
-              activeLine={activeLine}
-            />
-
-            {/* Drag overlay */}
-            <AnimatePresence>
-              {isDragging && (
-                <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  style={{
-                    position: 'absolute', inset: 0, zIndex: 10,
-                    border: `2px dashed ${C.acid}`,
-                    background: 'rgba(173,255,47,0.04)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 8, pointerEvents: 'none',
-                  }}
-                >
-                  <div style={{ fontSize: 28, color: C.acid }}>⬇</div>
-                  <div style={{ fontSize: 11, color: C.acid, letterSpacing: '0.1em' }}>DROP FILE TO LOAD</div>
-                  <div style={{ fontSize: 9, color: C.subdued }}>{SUPPORTED_EXTENSIONS.slice(0, 8).join('  ')} …</div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
           {/* Action bar */}
           <div style={{
             display: 'flex', alignItems: 'center', height: 44,
-            borderTop: `1px solid ${C.border}`, flexShrink: 0,
+            borderBottom: `1px solid ${C.border}`, flexShrink: 0,
           }}>
             {/* ANALYZE button */}
             <button
@@ -584,6 +547,43 @@ export default function Scanner() {
             <div style={{ marginLeft: 'auto', padding: '0 14px', fontSize: 9, color: C.muted }}>
               soteria scanner v2
             </div>
+          </div>
+
+          {/* Editor */}
+          <div
+            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleFileDrop}
+          >
+            <CodeEditor
+              code={code}
+              setCode={setCode}
+              language={editorLang}
+              className="h-full"
+              vulnerabilities={result.vulnerabilities}
+              activeLine={activeLine}
+            />
+
+            {/* Drag overlay */}
+            <AnimatePresence>
+              {isDragging && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    border: `2px dashed ${C.acid}`,
+                    background: 'rgba(173,255,47,0.04)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: 8, pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{ fontSize: 28, color: C.acid }}>⬇</div>
+                  <div style={{ fontSize: 11, color: C.acid, letterSpacing: '0.1em' }}>DROP FILE TO LOAD</div>
+                  <div style={{ fontSize: 9, color: C.subdued }}>{SUPPORTED_EXTENSIONS.slice(0, 8).join('  ')} …</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
