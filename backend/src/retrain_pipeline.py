@@ -22,9 +22,10 @@ from typing import Any
 
 import pandas as pd
 
-ROOT      = Path(__file__).resolve().parent.parent.parent  # ACID/
-DB_PATH   = ROOT / 'middleware' / 'scan_history.db'
-CSV_PATH  = ROOT / 'backend' / 'CSV_master' / 'numericFeatures.csv'
+ROOT       = Path(__file__).resolve().parent.parent.parent  # ACID/
+DB_PATH    = ROOT / 'middleware' / 'scan_history.db'
+CSV_PATH   = ROOT / 'backend' / 'CSV_master' / 'numericFeatures.csv'
+CVE_CSV    = ROOT / 'backend' / 'CSV_master' / 'cve_features.csv'
 MODEL_PATH = ROOT / 'backend' / 'ML_master' / 'acidModel.pkl'
 
 MIN_NEW_SAMPLES = 10   # refuse retrain below this threshold
@@ -159,6 +160,7 @@ def _build_ensemble():
 def run_retrain(
     db_path: Path = DB_PATH,
     csv_path: Path = CSV_PATH,
+    cve_csv: Path = CVE_CSV,
     model_path: Path = MODEL_PATH,
     min_new_samples: int = MIN_NEW_SAMPLES,
     dry_run: bool = False,
@@ -187,14 +189,23 @@ def run_retrain(
         'reason': '',
     }
 
-    # 1. Load original CSV
+    # 1. Load original CSV (+ optional CVE features CSV)
     if not csv_path.exists():
         result['reason'] = f'numericFeatures.csv not found: {csv_path}'
         return result
 
     orig_df = pd.read_csv(csv_path)
+    # Merge CVE scraper output if available
+    if cve_csv.exists():
+        try:
+            cve_df = pd.read_csv(cve_csv)
+            orig_df = pd.concat([orig_df, cve_df], ignore_index=True)
+            print(f'[retrain] Merged cve_features.csv: +{len(cve_df)} rows → {len(orig_df)} total')
+        except Exception as e:
+            print(f'[retrain] Warning: could not load cve_features.csv: {e}')
+
     feature_cols = [c for c in orig_df.columns if c not in ('LABEL', 'SOURCE')]
-    X_orig = orig_df[feature_cols]
+    X_orig = orig_df[feature_cols].fillna(0)
     y_orig = orig_df['LABEL'].astype(int)
 
     # 2. Load labeled scans
