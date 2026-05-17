@@ -251,7 +251,7 @@ export default function Scanner() {
         message: data.reason,
         language: data.language,
       });
-    } catch { setResult({ status: 'error', message: 'INTELLIGENCE LINK OFFLINE — check backend @ :5001' }); }
+    } catch { setResult({ status: 'error', message: 'INTELLIGENCE LINK OFFLINE — backend unreachable' }); }
   };
 
   const submitFeedback = async (correct: boolean) => {
@@ -446,7 +446,7 @@ export default function Scanner() {
         </AnimatePresence>
 
         {/* ── LEFT: EDITOR PANE ─────────────────────────────────────────── */}
-        <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}>
+        <div style={{ flex: '0 0 40%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}>
 
           {/* Filename + upload row */}
           <div style={{
