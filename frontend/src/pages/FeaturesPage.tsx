@@ -92,7 +92,7 @@ export default function FeaturesPage() {
                 </div>
 
                 {/* Code preview panel */}
-                <div style={{ padding: '40px 48px', background: '#040404', ...MONO, fontSize: '12px', lineHeight: 1.9 }}>
+                <div style={{ padding: '40px 48px', background: COLORS.surface, ...MONO, fontSize: '12px', lineHeight: 1.9 }}>
                     <div style={{ border: `1px solid ${C.border}`, padding: '20px' }}>
                         <div><span style={{ color: C.accent }}>$</span> soteria scan auth_handler.py</div>
                         <div style={{ color: C.muted }}>  analyzing...</div>
@@ -133,7 +133,7 @@ export default function FeaturesPage() {
                     </div>
                 </div>
 
-                <div style={{ padding: '40px 48px', background: '#030303' }}>
+                <div style={{ padding: '40px 48px', background: COLORS.surface }}>
                     <div style={{ marginBottom: '16px' }}>
                         <div style={{ ...MONO, fontSize: '10px', color: C.muted, letterSpacing: '0.1em', marginBottom: '12px' }}>EXAMPLE EXPLANATION</div>
                         <div style={{ ...SANS, fontSize: '13px', color: C.subdued, lineHeight: 1.8, borderLeft: `2px solid ${C.accent}`, paddingLeft: '14px' }}>

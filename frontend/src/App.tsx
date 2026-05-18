@@ -12,7 +12,6 @@ import Signup from './pages/Signup';
 import LandingPage from './pages/LandingPage';
 import FeaturesPage from './pages/FeaturesPage';
 import HowItWorks from './pages/HowItWorks';
-import Changelog from './pages/Changelog';
 import ForgotPassword from './pages/ForgotPassword';
 import GithubCallback from './pages/GithubCallback';
 import { AuthProvider } from './context/AuthContext';
@@ -67,7 +66,6 @@ function App() {
                 <Route path="/home" element={<PublicRoute><LandingPage /></PublicRoute>} />
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
-                <Route path="/changelog" element={<Changelog />} />
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />

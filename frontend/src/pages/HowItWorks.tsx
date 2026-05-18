@@ -110,7 +110,7 @@ export default function HowItWorks() {
                             {step.body}
                         </p>
                     </div>
-                    <div style={{ padding: '44px 48px', background: i % 2 === 1 ? '#030303' : 'transparent', display: 'flex', alignItems: 'flex-start' }}>
+                    <div style={{ padding: '44px 48px', background: i % 2 === 1 ? COLORS.surface : 'transparent', display: 'flex', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '72px' }}>
                             {step.points.map((pt, j) => (
                                 <div key={j} style={{ display: 'flex', gap: '12px', ...SANS, fontSize: '14px', color: C.subdued }}>

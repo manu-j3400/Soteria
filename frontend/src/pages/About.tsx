@@ -56,7 +56,7 @@ export default function About() {
                             width: '88px', height: '88px',
                             border: `1px solid ${C.accent}`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: '#050505',
+                            background: COLORS.surface,
                         }}>
                             <span style={{ ...MONO, fontSize: '28px', fontWeight: 900, color: C.accent, letterSpacing: '-0.04em' }}>MJ</span>
                         </div>

@@ -3,12 +3,15 @@ import { useAuth } from '@/context/AuthContext';
 import { COLORS } from '../theme/colors';
 
 const ACCENT = COLORS.acid;
+const BG = COLORS.bg;
+const BORDER = COLORS.border;
+const MUTED = COLORS.muted;
+const SUB = COLORS.sub;
 const FONT = "'JetBrains Mono', 'Courier New', monospace";
 
 const NAV_LINKS = [
     { path: '/features',    label: 'FEATURES'    },
     { path: '/how-it-works',label: 'HOW IT WORKS' },
-    { path: '/changelog',   label: 'LIFECYCLE'    },
     { path: '/about',       label: 'ABOUT'        },
 ];
 
@@ -25,12 +28,12 @@ export default function PublicNavbar() {
             left: 0,
             right: 0,
             zIndex: 50,
-            backgroundColor: '#000',
+            backgroundColor: BG,
             fontFamily: FONT,
         }}>
             {/* Top Status Strip */}
             <div style={{
-                borderBottom: '1px solid #1E1E1E',
+                borderBottom: `1px solid ${BORDER}`,
                 height: '24px',
                 display: 'flex',
                 alignItems: 'center',
@@ -41,7 +44,7 @@ export default function PublicNavbar() {
                     <span style={{ fontSize: '11px', color: ACCENT, letterSpacing: '0.14em' }}>
                         ● SOTERIA
                     </span>
-                    <span style={{ fontSize: '11px', color: '#333', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
                         SECURITY ANALYSIS PLATFORM v2.5
                     </span>
                 </div>
@@ -51,21 +54,21 @@ export default function PublicNavbar() {
                             <span style={{ fontSize: '11px', color: ACCENT, letterSpacing: '0.12em' }}>
                                 [ CONNECTED ] {user.name}
                             </span>
-                            <span style={{ fontSize: '11px', color: '#333', letterSpacing: '0.1em' }}>
+                            <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
                                 SESSION::ACTIVE
                             </span>
                         </>
                     ) : (
                         <>
-                            <span style={{ fontSize: '11px', color: '#555', letterSpacing: '0.12em' }}>
+                            <span style={{ fontSize: '11px', color: SUB, letterSpacing: '0.12em' }}>
                                 [ LIVE ]
                             </span>
-                            <span style={{ fontSize: '11px', color: '#333', letterSpacing: '0.1em' }}>
+                            <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
                                 AUTH::NONE
                             </span>
                         </>
                     )}
-                    <span style={{ fontSize: '11px', color: '#222', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
                         KRN::5.15.0-LTS
                     </span>
                 </div>
@@ -73,7 +76,7 @@ export default function PublicNavbar() {
 
             {/* Main Nav Bar */}
             <div style={{
-                borderBottom: '1px solid #1E1E1E',
+                borderBottom: `1px solid ${BORDER}`,
                 height: '52px',
                 display: 'flex',
                 alignItems: 'center',
@@ -114,7 +117,7 @@ export default function PublicNavbar() {
                         fontSize: '11px',
                         color: ACCENT,
                         letterSpacing: '0.1em',
-                        borderLeft: '1px solid #1E1E1E',
+                        borderLeft: `1px solid ${BORDER}`,
                         paddingLeft: '10px',
                         marginLeft: '2px',
                     }}>
@@ -140,12 +143,12 @@ export default function PublicNavbar() {
                                     fontWeight: 700,
                                     letterSpacing: '0.14em',
                                     textDecoration: 'none',
-                                    color: active ? ACCENT : '#555',
+                                    color: active ? ACCENT : SUB,
                                     padding: '0 16px',
                                     height: '52px',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    borderRight: '1px solid #1E1E1E',
+                                    borderRight: `1px solid ${BORDER}`,
                                     borderBottom: active ? `2px solid ${ACCENT}` : '2px solid transparent',
                                     transition: 'color 0.15s',
                                 }}
@@ -153,7 +156,7 @@ export default function PublicNavbar() {
                                     if (!active) (e.currentTarget as HTMLAnchorElement).style.color = ACCENT;
                                 }}
                                 onMouseLeave={e => {
-                                    if (!active) (e.currentTarget as HTMLAnchorElement).style.color = '#555';
+                                    if (!active) (e.currentTarget as HTMLAnchorElement).style.color = SUB;
                                 }}
                             >
                                 {label}
@@ -170,7 +173,7 @@ export default function PublicNavbar() {
                                 fontSize: '11px',
                                 fontFamily: FONT,
                                 color: '#444',
-                                border: '1px solid #1E1E1E',
+                                border: `1px solid ${BORDER}`,
                                 padding: '5px 12px',
                                 letterSpacing: '0.08em',
                             }}>
@@ -207,9 +210,9 @@ export default function PublicNavbar() {
                                     fontFamily: FONT,
                                     fontSize: '11px',
                                     letterSpacing: '0.12em',
-                                    color: '#555',
+                                    color: SUB,
                                     backgroundColor: 'transparent',
-                                    border: '1px solid #1E1E1E',
+                                    border: `1px solid ${BORDER}`,
                                     padding: '6px 12px',
                                     cursor: 'pointer',
                                     borderRadius: '0px',
@@ -237,9 +240,9 @@ export default function PublicNavbar() {
                                     fontWeight: 700,
                                     letterSpacing: '0.14em',
                                     textDecoration: 'none',
-                                    color: '#555',
+                                    color: SUB,
                                     backgroundColor: 'transparent',
-                                    border: '1px solid #1E1E1E',
+                                    border: `1px solid ${BORDER}`,
                                     padding: '6px 16px',
                                     textTransform: 'uppercase',
                                     borderRadius: '0px',

@@ -61,7 +61,7 @@ function Terminal() {
     }, []);
 
     return (
-        <div style={{ border: `1px solid ${C.border}`, background: '#050505', flexShrink: 0 }}>
+        <div style={{ border: `1px solid ${C.border}`, background: COLORS.surface, flexShrink: 0 }}>
             <div style={{
                 padding: '7px 14px', borderBottom: `1px solid ${C.border}`,
                 display: 'flex', alignItems: 'center', gap: 8,
