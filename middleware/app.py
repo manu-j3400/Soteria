@@ -732,7 +732,7 @@ def init_users_db():
         )
         conn.commit()
         if is_random:
-            print(f"WARNING: ADMIN_PASSWORD not set — generated admin password: {admin_password} (set ADMIN_PASSWORD env var to persist)")
+            print("WARNING: ADMIN_PASSWORD not set — generated a random admin password for bootstrap. Set ADMIN_PASSWORD env var to persist.")
         else:
             print("Default admin seeded (admin@soteria.dev / [from ADMIN_PASSWORD env])")
     
