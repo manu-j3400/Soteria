@@ -732,15 +732,7 @@ def init_users_db():
         )
         conn.commit()
         if is_random:
-            # Write generated password to a root-only file; never log it in plaintext
-            _pw_file = os.path.join(os.path.dirname(__file__), '.admin_pw')
-            try:
-                with open(_pw_file, 'w') as _f:
-                    _f.write(admin_password)
-                os.chmod(_pw_file, 0o600)
-                print(f"WARNING: ADMIN_PASSWORD not set — generated password written to {_pw_file} (chmod 600, read once)")
-            except OSError:
-                print("WARNING: ADMIN_PASSWORD not set and could not write password file — set ADMIN_PASSWORD env var")
+            print(f"WARNING: ADMIN_PASSWORD not set — generated admin password: {admin_password} (set ADMIN_PASSWORD env var to persist)")
         else:
             print("Default admin seeded (admin@soteria.dev / [from ADMIN_PASSWORD env])")
     
