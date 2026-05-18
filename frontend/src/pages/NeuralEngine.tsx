@@ -176,7 +176,7 @@ export default function NeuralEngine() {
             <div style={{ display: 'flex', height: 'calc(100vh - 36px)' }}>
 
                 {/* ── LEFT COLUMN ──────────────────────────────────────────── */}
-                <div style={{ width: 320, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ width: 320, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
                     {/* Engine status list */}
                     <div style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 0' }}>
