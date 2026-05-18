@@ -1747,19 +1747,20 @@ def analyze(current_user):
     # Auto-save to scan history if logged in
     user_id = current_user['user_id'] if current_user else None
 
+    _feat_row = featuresDf.iloc[0].to_dict() if not featuresDf.empty else {}
     _features = {
-        'max_entropy':           counts.get('max_entropy', 0),
-        'mean_entropy':          counts.get('mean_entropy', 0),
-        'n_high_entropy_nodes':  counts.get('n_high_entropy_nodes', 0),
-        'cyclomatic_complexity': counts.get('cyclomatic_complexity', 0),
-        'n_dangerous_calls':     counts.get('n_dangerous_calls', 0),
-        'n_suspicious_imports':  counts.get('n_suspicious_imports', 0),
-        'import_count':          counts.get('import_count', 0),
-        'n_sql_sink_calls':      counts.get('n_sql_sink_calls', 0),
-        'has_sql_concat':        counts.get('has_sql_concat', 0),
-        'n_user_input_sources':  counts.get('n_user_input_sources', 0),
-        'taint_reaches_sql':     counts.get('taint_reaches_sql', 0),
-        'taint_reaches_shell':   counts.get('taint_reaches_shell', 0),
+        'max_entropy':           _feat_row.get('max_entropy', 0),
+        'mean_entropy':          _feat_row.get('mean_entropy', 0),
+        'n_high_entropy_nodes':  _feat_row.get('n_high_entropy_nodes', 0),
+        'cyclomatic_complexity': _feat_row.get('cyclomatic_complexity', 0),
+        'n_dangerous_calls':     _feat_row.get('n_dangerous_calls', 0),
+        'n_suspicious_imports':  _feat_row.get('n_suspicious_imports', 0),
+        'import_count':          _feat_row.get('import_count', 0),
+        'n_sql_sink_calls':      _feat_row.get('n_sql_sink_calls', 0),
+        'has_sql_concat':        _feat_row.get('has_sql_concat', 0),
+        'n_user_input_sources':  _feat_row.get('n_user_input_sources', 0),
+        'taint_reaches_sql':     _feat_row.get('taint_reaches_sql', 0),
+        'taint_reaches_shell':   _feat_row.get('taint_reaches_shell', 0),
         'gcn_prob':              result.get('metadata', {}).get('gcn_probability'),
         'rf_confidence':         confidence,
     }
