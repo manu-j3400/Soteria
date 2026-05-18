@@ -132,7 +132,7 @@ export default function LandingPage() {
                         }}>
                             <span style={{ display: 'block' }}>PREVENTING YOUR</span>
                             <span style={{ display: 'block' }}>APPLICATION</span>
-                            <span style={{ display: 'block', color: C.red, borderBottom: `2px solid ${C.acid}`, paddingBottom: 4, display: 'inline-block' }}>FROM TURNING AGAINST YOU</span>
+                            <span style={{ display: 'block', color: C.red }}>FROM TURNING AGAINST YOU</span>
                         </h1>
 
                         <p style={{
