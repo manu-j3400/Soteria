@@ -185,9 +185,11 @@ export default function Scanner() {
 
   const handleDownloadReport = async () => {
     try {
+      const _pdfHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) _pdfHeaders['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API_BASE_URL}/generate-report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _pdfHeaders,
         body: JSON.stringify({
           code, verdict: result.status.toUpperCase(),
           confidence: result.confidence, risk_level: result.riskLevel,

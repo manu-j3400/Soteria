@@ -1841,7 +1841,7 @@ def analyze(current_user):
 
 
 @app.route('/generate-report', methods=['POST'])
-@token_required(optional=False)
+@token_required(optional=True)
 @rate_limit(max_requests=10, window_seconds=60)
 def generateReport(current_user):
     data = request.get_json()
