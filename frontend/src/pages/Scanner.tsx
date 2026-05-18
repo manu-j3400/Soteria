@@ -449,7 +449,7 @@ export default function Scanner() {
         </AnimatePresence>
 
         {/* ── LEFT: EDITOR PANE ─────────────────────────────────────────── */}
-        <div style={{ flex: '0 0 40%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}>
+        <div style={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}>
 
           {/* Filename + upload row */}
           <div style={{

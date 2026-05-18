@@ -1741,6 +1741,18 @@ def analyze(current_user):
     if vulnerabilities:
         result['vulnerabilities'] = vulnerabilities
         result['summary'] = generate_tldr_summary(vulnerabilities)
+
+        # Elevate verdict/risk if scanner found HIGH or CRITICAL issues the ML missed
+        _sev_rank = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+        _max_sev = max((_sev_rank.get(v.get('severity', 'LOW'), 1) for v in vulnerabilities), default=1)
+        _cur_rank = _sev_rank.get(result.get('risk_level', 'LOW'), 1)
+        if _max_sev > _cur_rank:
+            _new_label = {4: 'CRITICAL', 3: 'HIGH', 2: 'MEDIUM', 1: 'LOW'}[_max_sev]
+            result['risk_level'] = _new_label
+            if _max_sev >= 3:  # HIGH or CRITICAL → flag as threat
+                result['malicious'] = True
+                if not result.get('reason') or result.get('risk_level') in ('LOW', 'MEDIUM'):
+                    result['reason'] = f"{_new_label.capitalize()} severity vulnerability detected by pattern scanner"
     else:
         result['summary'] = "No vulnerabilities detected. Code follows standard safety profiles."
 
