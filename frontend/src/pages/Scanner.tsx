@@ -342,7 +342,7 @@ export default function Scanner() {
     <div
       style={{
         display: 'flex', flexDirection: 'column', height: '100%',
-        background: '#000', fontFamily: "'JetBrains Mono', monospace",
+        background: '#030712', fontFamily: "'JetBrains Mono', monospace",
         color: C.text, overflow: 'hidden',
       }}
     >
@@ -410,7 +410,7 @@ export default function Scanner() {
               style={{
                 borderRight: `1px solid ${C.border}`, flexShrink: 0,
                 overflowY: 'auto', overflowX: 'hidden',
-                background: '#000',
+                background: '#030712',
               }}
             >
               <div style={{ padding: '8px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

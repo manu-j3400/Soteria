@@ -22,7 +22,7 @@ const MONO = "'JetBrains Mono', monospace";
 const SANS = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
 
 const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#000', border: `1px solid #1E1E1E`,
+    width: '100%', background: '#030712', border: `1px solid #1E1E1E`,
     outline: 'none', padding: '9px 12px', fontFamily: MONO,
     fontSize: 11, color: '#E5E5E5', boxSizing: 'border-box' as const,
     transition: 'border-color 0.15s',
@@ -57,7 +57,7 @@ export default function Signup() {
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#000', display: 'flex',
+            minHeight: '100vh', background: '#030712', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             fontFamily: SANS, color: C.text,
         }}>

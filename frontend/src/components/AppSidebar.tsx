@@ -16,7 +16,7 @@ const NAV = [
 ];
 
 const S = {
-  sidebar:   { background: '#000', borderRight: `1px solid ${COLORS.border}`, fontFamily: "'JetBrains Mono', monospace" },
+  sidebar:   { background: '#030712', borderRight: `1px solid ${COLORS.border}`, fontFamily: "'JetBrains Mono', monospace" },
   topBorder: { borderBottom: `1px solid ${COLORS.border}` },
   midBorder: { borderBottom: `1px solid ${COLORS.border2}` },
   botBorder: { borderTop: `1px solid ${COLORS.border}` },

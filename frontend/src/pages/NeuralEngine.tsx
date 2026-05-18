@@ -141,7 +141,7 @@ export default function NeuralEngine() {
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#000',
+            minHeight: '100vh', background: '#030712',
             fontFamily: "'JetBrains Mono', monospace",
             color: C.text,
         }}>

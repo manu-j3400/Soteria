@@ -157,10 +157,10 @@ function ScanRow({
       className="flex items-center gap-3 px-5 py-2.5 cursor-pointer transition-colors duration-100"
       style={{
         borderBottom: `1px solid ${C.faint}`,
-        background: selected ? '#0A0A00' : 'transparent',
+        background: selected ? '#0D1829' : 'transparent',
       }}
-      onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLDivElement).style.background = '#050505'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = selected ? '#0A0A00' : 'transparent'; }}>
+      onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLDivElement).style.background = '#060E1E'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = selected ? '#0D1829' : 'transparent'; }}>
 
       {/* Selection indicator */}
       <span className="w-2 h-2 flex-shrink-0 flex items-center justify-center" style={{ ...MONO }}>
@@ -331,7 +331,7 @@ export default function DesktopHome() {
   const trendData = data?.daily_trend?.map(d => d.total) ?? [];
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ background: '#000', ...MONO, color: C.text }}>
+    <div className="h-screen flex overflow-hidden" style={{ background: '#030712', ...MONO, color: C.text }}>
       <AppSidebar />
 
       {/* ── Main content area ── */}
@@ -339,7 +339,7 @@ export default function DesktopHome() {
 
         {/* ══ STATUS STRIP ══════════════════════════════════════════════════ */}
         <header className="flex items-center h-9 flex-shrink-0 sticky top-0 z-40"
-          style={{ background: '#000', borderBottom: `1px solid ${C.dim}` }}>
+          style={{ background: '#030712', borderBottom: `1px solid ${C.dim}` }}>
 
           <div className="flex items-center gap-2 px-5 h-full" style={{ borderRight: `1px solid ${C.dim}` }}>
             <span className="w-1.5 h-1.5 animate-pulse flex-shrink-0"
@@ -714,7 +714,7 @@ export default function DesktopHome() {
 
             {/* Column headers */}
             <div className="flex items-center gap-3 px-5 py-2 flex-shrink-0"
-              style={{ borderBottom: `1px solid ${C.dim}`, background: '#030303' }}>
+              style={{ borderBottom: `1px solid ${C.dim}`, background: '#040A14' }}>
               <span className="w-2 flex-shrink-0" />
               <span className="text-[8px] tracking-[0.2em] w-10 flex-shrink-0" style={{ color: C.faint }}>ID</span>
               <span className="text-[8px] tracking-[0.2em] w-8 flex-shrink-0"  style={{ color: C.faint }}>AGE</span>

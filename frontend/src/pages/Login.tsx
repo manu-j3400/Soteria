@@ -55,7 +55,7 @@ export default function Login() {
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#000', display: 'flex',
+            minHeight: '100vh', background: '#030712', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             fontFamily: SANS, color: C.text,
         }}>
@@ -101,7 +101,7 @@ export default function Login() {
                             type="email" value={email} onChange={e => setEmail(e.target.value)}
                             placeholder="operator@domain.com" required
                             style={{
-                                width: '100%', background: '#000', border: `1px solid ${C.border}`,
+                                width: '100%', background: '#030712', border: `1px solid ${C.border}`,
                                 outline: 'none', padding: '9px 12px', fontFamily: MONO,
                                 fontSize: 11, color: C.text, boxSizing: 'border-box',
                                 transition: 'border-color 0.15s',
@@ -128,7 +128,7 @@ export default function Login() {
                                 value={password} onChange={e => setPassword(e.target.value)}
                                 placeholder="••••••••" required
                                 style={{
-                                    width: '100%', background: '#000', border: `1px solid ${C.border}`,
+                                    width: '100%', background: '#030712', border: `1px solid ${C.border}`,
                                     outline: 'none', padding: '9px 36px 9px 12px',
                                     fontFamily: MONO, fontSize: 11,
                                     color: C.text, boxSizing: 'border-box', transition: 'border-color 0.15s',

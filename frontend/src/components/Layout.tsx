@@ -21,7 +21,7 @@ function Breadcrumbs() {
     <div style={{
       height: 32, display: 'flex', alignItems: 'center', gap: 6,
       padding: '0 20px', borderBottom: `1px solid ${COLORS.border}`,
-      background: '#000', flexShrink: 0,
+      background: '#030712', flexShrink: 0,
       fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
       letterSpacing: '0.08em',
     }}>
@@ -39,7 +39,7 @@ function Breadcrumbs() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen flex overflow-hidden" style={{ background: '#000', fontFamily: "'JetBrains Mono', monospace" }}>
+    <div className="h-screen flex overflow-hidden" style={{ background: '#030712', fontFamily: "'JetBrains Mono', monospace" }}>
       <AppSidebar />
       <main className="flex-1 flex flex-col overflow-hidden md:ml-48">
         <Breadcrumbs />

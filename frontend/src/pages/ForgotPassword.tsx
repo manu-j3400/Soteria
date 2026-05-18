@@ -27,7 +27,7 @@ export default function ForgotPassword() {
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#000', display: 'flex',
+            minHeight: '100vh', background: '#030712', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             fontFamily: "'JetBrains Mono', monospace", color: C.text,
         }}>
@@ -82,7 +82,7 @@ export default function ForgotPassword() {
                                     type="email" value={email} onChange={e => setEmail(e.target.value)}
                                     placeholder="operator@domain.com" required
                                     style={{
-                                        width: '100%', background: '#000', border: `1px solid ${C.border}`,
+                                        width: '100%', background: '#030712', border: `1px solid ${C.border}`,
                                         outline: 'none', padding: '9px 12px',
                                         fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                                         color: C.text, boxSizing: 'border-box' as const,

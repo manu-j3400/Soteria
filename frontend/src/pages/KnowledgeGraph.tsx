@@ -111,7 +111,7 @@ export default function KnowledgeGraph() {
     const languages  = new Set(history.map(h => h.language || 'unknown')).size;
 
     return (
-        <div style={{ minHeight: '100vh', background: '#000', fontFamily: "'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' }}>
+        <div style={{ minHeight: '100vh', background: '#030712', fontFamily: "'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' }}>
 
             {/* ── TOP STATUS STRIP ─────────────────────────────────────────── */}
             <div style={{
