@@ -108,7 +108,7 @@ function Terminal() {
 
 export default function LandingPage() {
     return (
-        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden' }}>
+        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 60%)' }}>
             <PublicNavbar />
 
             {/* ── HERO ─────────────────────────────────────────────────────── */}
@@ -119,6 +119,9 @@ export default function LandingPage() {
                     gap: 72, alignItems: 'flex-start',
                 }}>
                     <div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: C.acid, letterSpacing: '0.2em', marginBottom: 20 }}>
+                            KYBER ENGINE v3.0 · REAL-TIME ANALYSIS
+                        </div>
                         <h1 style={{
                             ...MONO,
                             fontSize: 'clamp(38px, 5vw, 68px)',
@@ -129,7 +132,7 @@ export default function LandingPage() {
                         }}>
                             <span style={{ display: 'block' }}>PREVENTING YOUR</span>
                             <span style={{ display: 'block' }}>APPLICATION</span>
-                            <span style={{ display: 'block', color: C.red }}>FROM TURNING AGAINST YOU</span>
+                            <span style={{ display: 'block', color: C.red, borderBottom: `2px solid ${C.acid}`, paddingBottom: 4, display: 'inline-block' }}>FROM TURNING AGAINST YOU</span>
                         </h1>
 
                         <p style={{
@@ -269,7 +272,7 @@ export default function LandingPage() {
                             <div
                                 key={cat.cat}
                                 style={{
-                                    background: i % 2 === 1 ? '#0A0A0A' : 'transparent',
+                                    background: i % 2 === 1 ? COLORS.surface : 'transparent',
                                     padding: '24px',
                                     borderRight: i % 2 === 0 ? `1px solid ${C.border}` : 'none',
                                     borderBottom: i < 2 ? `1px solid ${C.border}` : 'none',
@@ -358,10 +361,9 @@ export default function LandingPage() {
 
                     <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
                         {[
-                            { to: '/features',    label: 'Features'  },
+                            { to: '/features',    label: 'Features'     },
                             { to: '/how-it-works',label: 'How it works' },
-                            { to: '/changelog',   label: 'Changelog' },
-                            { to: '/about',       label: 'About'     },
+                            { to: '/about',       label: 'About'        },
                         ].map(l => (
                             <Link key={l.to} to={l.to} style={{
                                 ...SANS, fontSize: 13, color: C.muted, textDecoration: 'none',
@@ -375,7 +377,7 @@ export default function LandingPage() {
                         ))}
                     </div>
 
-                    <div style={{ ...SANS, fontSize: 12, color: '#333' }}>
+                    <div style={{ ...SANS, fontSize: 12, color: C.muted }}>
                         © {new Date().getFullYear()} Soteria
                     </div>
                 </div>

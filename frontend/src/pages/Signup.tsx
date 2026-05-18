@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { COLORS } from '../theme/colors';
 
 const GoogleIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -11,22 +12,31 @@ const GoogleIcon = () => (
     </svg>
 );
 
-import { COLORS } from '../theme/colors';
 const C = {
-    acid: COLORS.acid, red: COLORS.red, amber: COLORS.orange,
-    border: COLORS.border, dim: COLORS.surface, muted: COLORS.muted,
-    text: COLORS.text, sub: COLORS.sub,
+    acid:    COLORS.acid,
+    red:     COLORS.red,
+    amber:   COLORS.orange,
+    border:  COLORS.border,
+    border2: COLORS.border2,
+    dim:     COLORS.surface,
+    muted:   COLORS.muted,
+    text:    COLORS.text,
+    sub:     COLORS.sub,
+    bg:      COLORS.bg,
 };
 
 const MONO = "'JetBrains Mono', monospace";
 const SANS = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
 
-const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#030712', border: `1px solid #1E1E1E`,
-    outline: 'none', padding: '9px 12px', fontFamily: MONO,
-    fontSize: 11, color: '#E5E5E5', boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s',
-};
+const PREVIEW_LINES = [
+    { text: '$ soteria scan auth.py', color: '#F8FAFC' },
+    { text: '  analyzing...', color: '#64748B' },
+    { text: '', color: '' },
+    { text: '  CRITICAL  SQL injection  L.42', color: '#FF4444' },
+    { text: '  HIGH      Hardcoded key  L.17', color: '#FF8C00' },
+    { text: '', color: '' },
+    { text: '  RISK: HIGH · 2 findings · 1.1s', color: '#00D4FF' },
+];
 
 export default function Signup() {
     const { signup, signInWithGoogle } = useAuth();
@@ -56,112 +66,148 @@ export default function Signup() {
     };
 
     return (
-        <div style={{
-            minHeight: '100vh', background: '#030712', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            fontFamily: SANS, color: C.text,
-        }}>
-            <div style={{ position: 'absolute', top: 20, left: 20, fontFamily: MONO, fontSize: 10, color: C.muted, letterSpacing: '0.1em' }}>
-                SOTERIA / REGISTER
-            </div>
-            <div style={{ position: 'absolute', top: 20, right: 20, fontFamily: MONO, fontSize: 10, color: C.muted, letterSpacing: '0.1em' }}>
-                [ NEW ACCOUNT ]
-            </div>
+        <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', fontFamily: SANS, color: C.text, overflow: 'hidden' }}>
 
-            <div style={{ width: '100%', maxWidth: 400, border: `1px solid ${C.border}`, background: C.dim }}>
-                {/* Header */}
-                <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontFamily: SANS, fontSize: 12, color: C.sub }}>Create account</div>
-                </div>
-
-                {/* Logo */}
-                <div style={{ padding: '28px 20px 20px', textAlign: 'center', borderBottom: `1px solid ${C.border}` }}>
-                    <Link to="/home">
-                        <img src="/soteria-logo.png" alt="Soteria" style={{ width: 48, height: 48, objectFit: 'cover', margin: '0 auto 12px', display: 'block' }} />
+            {/* ── LEFT: Brand panel ─────────────────────────────────── */}
+            <div style={{
+                width: '52%', flexShrink: 0, borderRight: `1px solid ${C.border}`,
+                display: 'flex', flexDirection: 'column',
+                background: `radial-gradient(ellipse 90% 60% at 10% 50%, rgba(0,212,255,0.07) 0%, transparent 65%)`,
+                position: 'relative', overflow: 'hidden',
+            }}>
+                <div style={{ padding: '16px 32px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Link to="/home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+                        <img src="/soteria-logo.png" alt="Soteria" style={{ width: 26, height: 26, objectFit: 'cover' }} />
+                        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>SOTERIA</span>
                     </Link>
-                    <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>SOTERIA</div>
-                    <div style={{ fontFamily: SANS, fontSize: 12, color: C.sub }}>Security intelligence platform</div>
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: C.acid, marginLeft: 6 }}>[ FREE ]</span>
                 </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-                    {[
-                        { label: 'Name', type: 'text', val: name, set: setName, placeholder: 'Your name', required: true },
-                        { label: 'Email address', type: 'email', val: email, set: setEmail, placeholder: 'operator@domain.com', required: true },
-                        { label: 'Password', type: 'password', val: password, set: setPassword, placeholder: 'Min. 6 characters', required: true, minLength: 6 },
-                    ].map(({ label, type, val, set, placeholder, required, minLength }) => (
-                        <div key={label} style={{ marginBottom: 12 }}>
-                            <label style={{ fontFamily: SANS, fontSize: 12, color: C.sub, display: 'block', marginBottom: 6 }}>{label}</label>
-                            <input
-                                type={type} value={val} onChange={e => set(e.target.value)}
-                                placeholder={placeholder} required={required}
-                                minLength={minLength}
-                                style={inputStyle}
-                                onFocus={e => (e.target.style.borderColor = C.acid)}
-                                onBlur={e => (e.target.style.borderColor = C.border)}
-                            />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 56px' }}>
+                    <div style={{ marginBottom: 36 }}>
+                        <div style={{ fontFamily: MONO, fontSize: 9, color: C.acid, letterSpacing: '0.22em', marginBottom: 16 }}>
+                            START FOR FREE · NO CREDIT CARD
                         </div>
-                    ))}
+                        <h1 style={{
+                            fontFamily: MONO, fontSize: 'clamp(26px, 2.8vw, 38px)',
+                            fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.02em',
+                            textTransform: 'uppercase', margin: '0 0 16px', color: C.text,
+                        }}>
+                            YOUR CODE.<br />
+                            <span style={{ color: C.acid }}>OUR SCANNER.</span><br />
+                            ZERO RISK.
+                        </h1>
+                        <p style={{ fontFamily: SANS, fontSize: 13, color: C.sub, lineHeight: 1.75, margin: 0, maxWidth: 320 }}>
+                            Free account. Full access. Scan your first file in 30 seconds.
+                        </p>
+                    </div>
 
-                    {error && (
-                        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(255,49,49,0.06)', border: `1px solid rgba(255,49,49,0.3)`, fontFamily: SANS, fontSize: 12, color: C.red }}>
-                            {error}
+                    {/* Terminal preview */}
+                    <div style={{ border: `1px solid ${C.border}`, background: C.dim }}>
+                        <div style={{ padding: '8px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 5, height: 5, background: C.acid, display: 'inline-block', borderRadius: '50%' }} />
+                            <span style={{ fontFamily: MONO, fontSize: 9, color: C.muted, letterSpacing: '0.1em' }}>SCAN SESSION</span>
                         </div>
-                    )}
+                        <div style={{ padding: '16px 20px' }}>
+                            {PREVIEW_LINES.map((line, i) => (
+                                <div key={i} style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.8, color: line.color || 'transparent', whiteSpace: 'pre' }}>
+                                    {line.text || '\u00A0'}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
 
-                    {emailExists && (
-                        <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(255,140,0,0.06)', border: `1px solid rgba(255,140,0,0.3)`, fontFamily: SANS, fontSize: 12, color: C.amber, lineHeight: 1.8 }}>
-                            Email already registered.{' '}
+                <div style={{ padding: '13px 32px', borderTop: `1px solid ${C.border}`, fontFamily: MONO, fontSize: 9, color: C.muted, letterSpacing: '0.12em' }}>
+                    KYBER ENGINE v3.0 · ENSEMBLE + GCN + SNN
+                </div>
+
+                <div style={{
+                    position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.025,
+                    backgroundImage: 'linear-gradient(rgba(0,212,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,1) 1px, transparent 1px)',
+                    backgroundSize: '48px 48px',
+                }} />
+            </div>
+
+            {/* ── RIGHT: Form ───────────────────────────────────────── */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 32px' }}>
+                <div style={{ width: '100%', maxWidth: 360 }}>
+                    <div style={{ marginBottom: 28 }}>
+                        <div style={{ fontFamily: MONO, fontSize: 9, color: C.muted, letterSpacing: '0.18em', marginBottom: 8 }}>NEW ACCOUNT</div>
+                        <h2 style={{ fontFamily: SANS, fontSize: 22, fontWeight: 800, color: C.text, margin: '0 0 6px', letterSpacing: '-0.01em' }}>Create account</h2>
+                        <p style={{ fontFamily: SANS, fontSize: 13, color: C.sub, margin: 0 }}>
+                            Already have one?{' '}
                             <Link to="/login" style={{ color: C.acid, textDecoration: 'none', fontWeight: 700 }}>Sign in</Link>
-                            {' '}or{' '}
-                            <Link to="/forgot-password" style={{ color: C.acid, textDecoration: 'none', fontWeight: 700 }}>reset your password</Link>
-                        </div>
-                    )}
+                        </p>
+                    </div>
 
-                    <button
-                        type="submit" disabled={loading}
-                        style={{
-                            width: '100%', padding: '11px 0',
-                            background: loading ? C.dim : C.acid,
-                            border: `1px solid ${loading ? C.muted : C.acid}`,
-                            color: loading ? C.sub : '#000',
-                            fontFamily: MONO, fontSize: 11,
-                            fontWeight: 700, letterSpacing: '0.1em', cursor: loading ? 'not-allowed' : 'pointer',
-                            marginBottom: 12, transition: 'background 0.15s',
-                        }}
+                    {/* Google */}
+                    <button type="button" onClick={handleGoogleSignIn} disabled={loading} style={{
+                        width: '100%', padding: '11px 0', background: C.dim,
+                        border: `1px solid ${C.border2}`, color: C.text,
+                        fontFamily: SANS, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                        transition: 'border-color 0.15s', marginBottom: 20,
+                    }}
+                        onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.borderColor = C.acid; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border2; }}
                     >
-                        {loading ? '[ CREATING ACCOUNT... ]' : '[ CREATE ACCOUNT ]'}
+                        <GoogleIcon />Continue with Google
                     </button>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0', color: C.muted }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                         <div style={{ flex: 1, height: 1, background: C.border }} />
-                        <span style={{ fontFamily: SANS, fontSize: 12 }}>or</span>
+                        <span style={{ fontFamily: SANS, fontSize: 11, color: C.muted }}>or with email</span>
                         <div style={{ flex: 1, height: 1, background: C.border }} />
                     </div>
 
-                    <button
-                        type="button" onClick={handleGoogleSignIn} disabled={loading}
-                        style={{
-                            width: '100%', padding: '10px 0', background: 'transparent',
-                            border: `1px solid ${C.border}`, color: C.text,
-                            fontFamily: SANS, fontSize: 13,
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                            transition: 'border-color 0.15s',
-                        }}
-                        onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.borderColor = C.sub; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border; }}
-                    >
-                        <GoogleIcon />
-                        Sign up with Google
-                    </button>
-                </form>
+                    <form onSubmit={handleSubmit}>
+                        {[
+                            { label: 'Name', type: 'text', val: name, set: setName, placeholder: 'Your name', required: true },
+                            { label: 'Email address', type: 'email', val: email, set: setEmail, placeholder: 'operator@domain.com', required: true },
+                            { label: 'Password', type: 'password', val: password, set: setPassword, placeholder: 'Min. 6 characters', required: true, minLength: 6 },
+                        ].map(({ label, type, val, set, placeholder, required, minLength }) => (
+                            <div key={label} style={{ marginBottom: 14 }}>
+                                <label style={{ fontFamily: SANS, fontSize: 12, color: C.sub, display: 'block', marginBottom: 6 }}>{label}</label>
+                                <input type={type} value={val} onChange={e => set(e.target.value)}
+                                    placeholder={placeholder} required={required} minLength={minLength}
+                                    style={{ width: '100%', background: C.dim, border: `1px solid ${C.border}`, outline: 'none', padding: '10px 14px', fontFamily: MONO, fontSize: 12, color: C.text, boxSizing: 'border-box' as const, transition: 'border-color 0.15s' }}
+                                    onFocus={e => (e.target.style.borderColor = C.acid)}
+                                    onBlur={e => (e.target.style.borderColor = C.border)}
+                                />
+                            </div>
+                        ))}
 
-                <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: SANS, fontSize: 13, color: C.sub }}>
-                        Already have an account?{' '}
-                        <Link to="/login" style={{ color: C.acid, textDecoration: 'none', fontWeight: 700 }}>Sign in</Link>
-                    </span>
+                        {error && (
+                            <div style={{ marginBottom: 14, padding: '9px 14px', background: 'rgba(255,68,68,0.06)', border: `1px solid rgba(255,68,68,0.25)`, fontFamily: SANS, fontSize: 12, color: C.red, lineHeight: 1.5 }}>
+                                {error}
+                            </div>
+                        )}
+
+                        {emailExists && (
+                            <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(255,140,0,0.06)', border: `1px solid rgba(255,140,0,0.25)`, fontFamily: SANS, fontSize: 12, color: C.amber, lineHeight: 1.8 }}>
+                                Email already registered.{' '}
+                                <Link to="/login" style={{ color: C.acid, textDecoration: 'none', fontWeight: 700 }}>Sign in</Link>
+                                {' '}or{' '}
+                                <Link to="/forgot-password" style={{ color: C.acid, textDecoration: 'none', fontWeight: 700 }}>reset password</Link>
+                            </div>
+                        )}
+
+                        <button type="submit" disabled={loading} style={{
+                            width: '100%', padding: '12px 0',
+                            background: loading ? C.dim : C.acid,
+                            border: `1px solid ${loading ? C.muted : C.acid}`,
+                            color: loading ? C.sub : '#000',
+                            fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                            cursor: loading ? 'not-allowed' : 'pointer', transition: 'opacity 0.15s',
+                            marginTop: 4,
+                        }}
+                            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                        >
+                            {loading ? '[ CREATING ACCOUNT... ]' : '[ CREATE ACCOUNT ]'}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
