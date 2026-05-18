@@ -31,57 +31,14 @@ export default function PublicNavbar() {
             backgroundColor: BG,
             fontFamily: FONT,
         }}>
-            {/* Top Status Strip */}
-            <div style={{
-                borderBottom: `1px solid ${BORDER}`,
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 24px',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <span style={{ fontSize: '11px', color: ACCENT, letterSpacing: '0.14em' }}>
-                        ● SOTERIA
-                    </span>
-                    <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
-                        SECURITY ANALYSIS PLATFORM v2.5
-                    </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    {isAuthenticated && user ? (
-                        <>
-                            <span style={{ fontSize: '11px', color: ACCENT, letterSpacing: '0.12em' }}>
-                                [ CONNECTED ] {user.name}
-                            </span>
-                            <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
-                                SESSION::ACTIVE
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <span style={{ fontSize: '11px', color: SUB, letterSpacing: '0.12em' }}>
-                                [ LIVE ]
-                            </span>
-                            <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
-                                AUTH::NONE
-                            </span>
-                        </>
-                    )}
-                    <span style={{ fontSize: '11px', color: MUTED, letterSpacing: '0.1em' }}>
-                        KRN::5.15.0-LTS
-                    </span>
-                </div>
-            </div>
-
             {/* Main Nav Bar */}
             <div style={{
                 borderBottom: `1px solid ${BORDER}`,
-                height: '52px',
+                height: '72px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 24px',
+                padding: '0 48px',
                 maxWidth: '1280px',
                 margin: '0 auto',
                 width: '100%',
@@ -117,9 +74,7 @@ export default function PublicNavbar() {
                         fontSize: '11px',
                         color: ACCENT,
                         letterSpacing: '0.1em',
-                        borderLeft: `1px solid ${BORDER}`,
-                        paddingLeft: '10px',
-                        marginLeft: '2px',
+                        marginLeft: '4px',
                     }}>
                         [ LIVE ]
                     </span>
@@ -129,7 +84,7 @@ export default function PublicNavbar() {
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0px',
+                    gap: '8px',
                 }}>
                     {NAV_LINKS.map(({ path, label }) => {
                         const active = isActive(path);
@@ -144,12 +99,9 @@ export default function PublicNavbar() {
                                     letterSpacing: '0.14em',
                                     textDecoration: 'none',
                                     color: active ? ACCENT : SUB,
-                                    padding: '0 16px',
-                                    height: '52px',
+                                    padding: '6px 16px',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    borderRight: `1px solid ${BORDER}`,
-                                    borderBottom: active ? `2px solid ${ACCENT}` : '2px solid transparent',
                                     transition: 'color 0.15s',
                                 }}
                                 onMouseEnter={e => {

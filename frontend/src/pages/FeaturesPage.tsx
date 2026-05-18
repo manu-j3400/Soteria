@@ -36,16 +36,6 @@ export default function FeaturesPage() {
         <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', paddingTop: 76 }}>
             <PublicNavbar />
 
-            {/* PAGE TITLE STRIP */}
-            <div style={{ borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'stretch', height: '36px' }}>
-                <div style={{ ...cellStyle, borderLeft: `1px solid ${C.border}`, color: C.text, fontWeight: 700, letterSpacing: '0.1em', fontSize: '11px' }}>
-                    FEATURES
-                </div>
-                <div style={{ ...cellStyle, color: C.accent }}>[ LIVE ]</div>
-                <div style={{ flex: 1, borderRight: `1px solid ${C.border}` }} />
-                <div style={{ ...cellStyle, borderRight: 'none' }}>UTC {new Date().toISOString().slice(11, 19)}</div>
-            </div>
-
             {/* HERO */}
             <section style={{ padding: '64px 48px 48px', borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ maxWidth: '680px' }}>
