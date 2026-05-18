@@ -53,7 +53,7 @@
     "framer-motion": "^12.38.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.503.0",
-    "motion-dom": "12.22.0",
+    "motion-dom": "12.38.0",
     "motion-utils": "12.19.0",
     "posthog-js": "^1.357.1",
     "react": "18.3.1",
