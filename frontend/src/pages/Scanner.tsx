@@ -82,7 +82,7 @@ interface VulnerabilityItem {
 interface AnalysisResult {
   status: 'waiting' | 'loading' | 'malicious' | 'clean' | 'error';
   message?: string; confidence?: number; riskLevel?: string;
-  language?: string; summary?: string; scanId?: number | null;
+  language?: string; summary?: string; scanId?: number | null; malicious?: boolean;
   metadata?: {
     nodes_scanned?: number;
     engine?: string;
@@ -237,7 +237,7 @@ export default function Scanner() {
         status: verdict, message: data.reason, confidence: normalizedConf,
         riskLevel: data.risk_level, language: data.language, summary: data.summary,
         metadata: data.metadata, vulnerabilities: data.vulnerabilities,
-        scanId: data.scan_id ?? null,
+        scanId: data.scan_id ?? null, malicious: !!data.malicious,
       });
       if (data.vulnerabilities) {
         const grps: Record<string, boolean> = {};
