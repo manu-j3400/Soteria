@@ -155,6 +155,7 @@ export default function Scanner() {
   const [expandedGroups, setExpandedGroups]   = useState<Record<string, boolean>>({});
   const [toastError, setToastError]           = useState<string | null>(null);
   const [historyOpen, setHistoryOpen]         = useState(false);
+  const [feedbackSent, setFeedbackSent]       = useState(false);
   const llmOutputRef                          = useRef('');
   const fileInputRef                          = useRef<HTMLInputElement>(null);
   const resultsRef                            = useRef<HTMLDivElement>(null);
@@ -208,7 +209,7 @@ export default function Scanner() {
     if (!code.trim()) return;
     if (code.length > 50000) { setResult({ status: 'error', message: 'Payload too large. Limit: 50,000 chars.' }); return; }
     setDeepScanStatus('idle'); setLlmOutput(''); setActiveTab('verdict');
-    setActiveLine(null); llmOutputRef.current = ''; setResult({ status: 'loading' });
+    setActiveLine(null); llmOutputRef.current = ''; setFeedbackSent(false); setResult({ status: 'loading' });
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -261,6 +262,8 @@ export default function Scanner() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ scan_id: result.scanId, correct }),
     }).catch(() => {});
+    setFeedbackSent(true);
+    setTimeout(() => setFeedbackSent(false), 3000);
   };
 
   const startDeepScan = async (scanData?: { vulnerabilities: VulnerabilityItem[]; riskLevel: string; confidence: number; message: string; language: string }) => {
@@ -741,23 +744,18 @@ export default function Scanner() {
                   )}
 
                   {/* User feedback */}
-                  {result.scanId && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8 }}>
-                      <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.1em', marginRight: 4, alignSelf: 'center' }}>
-                        VERDICT ACCURATE?
-                      </div>
-                      <button onClick={() => submitFeedback(true)}
-                        style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
-                                 color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                                 letterSpacing: '0.08em', cursor: 'pointer' }}>
-                        [ ✓ YES ]
-                      </button>
-                      <button onClick={() => submitFeedback(false)}
-                        style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
-                                 color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                                 letterSpacing: '0.08em', cursor: 'pointer' }}>
-                        [ ✗ WRONG ]
-                      </button>
+                  {result.scanId && result.malicious && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8, alignItems: 'center' }}>
+                      {feedbackSent ? (
+                        <span style={{ fontSize: 9, color: C.acid, letterSpacing: '0.1em' }}>[ ✓ REPORTED ]</span>
+                      ) : (
+                        <button onClick={() => submitFeedback(false)}
+                          style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
+                                   color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                                   letterSpacing: '0.08em', cursor: 'pointer' }}>
+                          [ REPORT FALSE POSITIVE ]
+                        </button>
+                      )}
                     </div>
                   )}
 
