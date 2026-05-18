@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import TrainingTerminal from '@/components/TrainingTerminal';
 
 interface ModelStats {
     status: string;
@@ -92,8 +91,6 @@ export default function NeuralEngine() {
         status: 'loading', accuracy: '—', last_trained: '—',
         model_type: '—', file_size: '—', features_count: 0,
     });
-    const [isTraining, setIsTraining] = useState(false);
-    const [logs, setLogs] = useState<string[]>([]);
     const [statsLoading, setStatsLoading] = useState(true);
     const [driftData, setDriftData] = useState<DriftData | null>(null);
     const [enginesStatus, setEnginesStatus] = useState<EnginesStatus | null>(null);
@@ -123,36 +120,6 @@ export default function NeuralEngine() {
             setModelStats(prev => ({ ...prev, status: 'offline' }));
         } finally {
             setStatsLoading(false);
-        }
-    };
-
-    const startTraining = async () => {
-        setIsTraining(true);
-        setLogs(['\x1b[33m[INIT] Connecting to training pipeline...\x1b[0m']);
-        try {
-            const response = await fetch(`${API_BASE_URL}/train-stream`, { method: 'POST' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-            if (!reader) throw new Error('No stream');
-            while (true) {
-                const { done, value } = await reader.read(); if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
-                for (const line of chunk.split('\n')) {
-                    if (!line.startsWith('data: ')) continue;
-                    const msg = line.slice(6);
-                    if (msg === '[STREAM_END]') { setIsTraining(false); fetchModelStats(); return; }
-                    const ts = new Date().toLocaleTimeString();
-                    if (msg.startsWith('[DONE]')) setLogs(p => [...p, `\x1b[32m${msg}\x1b[0m`]);
-                    else if (msg.startsWith('[ERROR]')) setLogs(p => [...p, `\x1b[31m${msg}\x1b[0m`]);
-                    else setLogs(p => [...p, `[${ts}] ${msg}`]);
-                }
-            }
-        } catch (e) {
-            setLogs(p => [...p, `\x1b[31m[ERROR] Training failed: ${e}\x1b[0m`]);
-        } finally {
-            setIsTraining(false);
-            fetchModelStats();
         }
     };
 
@@ -332,65 +299,86 @@ export default function NeuralEngine() {
                         )}
                     </div>
 
-                    {/* Spacer + retrain section */}
+                    {/* Auto-update note */}
                     <div style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, padding: 16 }}>
-                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.12em', marginBottom: 10 }}>TRAINING PIPELINE</div>
-                        <ul style={{ margin: '0 0 14px 0', padding: 0, listStyle: 'none', fontSize: 8, color: C.sub, lineHeight: 2 }}>
-                            {['Extract AST features from malware corpus', 'Train sklearn ensemble classifier', 'Rebuild GCN training graphs', 'Reload model into analysis pipeline'].map(s => (
-                                <li key={s} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                                    <span style={{ color: C.acid, marginTop: 1 }}>›</span>{s}
-                                </li>
-                            ))}
-                        </ul>
-                        <button
-                            onClick={startTraining}
-                            disabled={isTraining}
-                            style={{
-                                width: '100%', padding: '12px 0',
-                                background: isTraining ? C.dim : C.acid,
-                                border: `1px solid ${isTraining ? C.muted : C.acid}`,
-                                color: isTraining ? C.sub : '#000',
-                                fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-                                fontWeight: 700, letterSpacing: '0.1em',
-                                cursor: isTraining ? 'not-allowed' : 'pointer',
-                                transition: 'background 0.15s',
-                            }}
-                        >
-                            {isTraining ? '[ TRAINING... ]'
-                                : modelStats.status === 'no_model' ? '[ TRAIN FIRST MODEL ]'
-                                : '[ RETRAIN ENSEMBLE ]'}
-                        </button>
+                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.12em', marginBottom: 8 }}>MODEL UPDATES</div>
+                        <div style={{ fontSize: 8, color: C.sub, lineHeight: 1.8 }}>
+                            <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>Models improve automatically as more scans are collected</div>
+                            <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>Your false-positive reports help calibrate detection</div>
+                            <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>No action required — updates are applied server-side</div>
+                        </div>
                     </div>
                 </div>
 
-                {/* ── RIGHT: TERMINAL ───────────────────────────────────────── */}
+                {/* ── RIGHT: ENGINE OVERVIEW ────────────────────────────────── */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-                    {/* Terminal header */}
+                    {/* Header */}
                     <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        display: 'flex', alignItems: 'center',
                         height: 36, borderBottom: `1px solid ${C.border}`,
                         padding: '0 16px', fontSize: 9, color: C.sub, letterSpacing: '0.1em',
                     }}>
-                        <span>TRAINING PIPELINE OUTPUT</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: isTraining ? C.acid : C.muted, display: 'inline-block', animation: isTraining ? 'pulse 1s infinite' : 'none' }} />
-                            <span style={{ color: isTraining ? C.acid : C.sub }}>{isTraining ? '[ STREAMING ]' : '[ IDLE ]'}</span>
-                        </div>
+                        <span>HOW SOTERIA DETECTS THREATS</span>
                     </div>
 
-                    {/* Terminal body */}
-                    <div style={{ flex: 1, overflow: 'hidden', background: C.dim }}>
-                        {logs.length === 0 ? (
-                            <div style={{ padding: 24, fontSize: 10, color: C.sub, lineHeight: 2 }}>
-                                <div>kyber@soteria:~$ <span style={{ color: C.acid }}>_</span></div>
-                                <div style={{ marginTop: 16, color: C.muted }}>TRAINING PIPELINE IDLE</div>
-                                <div style={{ color: C.muted }}>CLICK [ RETRAIN ENSEMBLE ] TO START</div>
-                                <div style={{ marginTop: 16, color: C.muted }}>PHASES: AST EXTRACTION → FEATURE MATRIX → SKLEARN → GCN → RELOAD</div>
+                    {/* Engine explanation cards */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {[
+                            {
+                                short: 'SKL', label: 'Pattern Recognition',
+                                active: resolvedEngines.sklearn,
+                                how: 'Analyses the structure of your code — function calls, imports, control flow — using a trained ensemble of decision trees. Flags code that resembles known malware patterns from thousands of real-world samples.',
+                                catches: 'Obfuscated payloads, suspicious import chains, dangerous API call sequences',
+                            },
+                            {
+                                short: 'GCN', label: 'Control-Flow Graph Analysis',
+                                active: resolvedEngines.gcn,
+                                how: 'Builds a graph of how your code executes and runs a neural network over it. Catches structural tricks that look normal line-by-line but reveal malicious intent in the overall execution graph.',
+                                catches: 'Obfuscated loops, indirect execution chains, structure-hiding techniques',
+                            },
+                            {
+                                short: 'ENT', label: 'Entropy Scanner',
+                                active: resolvedEngines.entropy,
+                                how: 'Measures the randomness of string and byte literals in your code. Encrypted payloads, base64 shellcode, and packed binaries all leave a statistical fingerprint — unusually high entropy.',
+                                catches: 'Encrypted C2 strings, embedded shellcode, encoded payloads',
+                            },
+                            {
+                                short: 'SNN', label: 'Temporal Behaviour Profiling',
+                                active: resolvedEngines.snn,
+                                how: 'Models the timing signature of code execution using a spiking neural network. Decryption routines, beaconing loops, and C2 checkins all produce characteristic timing rhythms.',
+                                catches: 'Decryption stubs, periodic beaconing, sleep-and-wake C2 patterns',
+                            },
+                        ].map(({ short, label, active, how, catches }) => (
+                            <div key={short} style={{
+                                border: `1px solid ${active ? 'rgba(173,255,47,0.2)' : '#1A1A1A'}`,
+                                padding: 16,
+                                background: active ? 'rgba(173,255,47,0.02)' : 'transparent',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                    <span style={{
+                                        fontSize: 8, border: `1px solid ${active ? C.acid : C.muted}`,
+                                        color: active ? C.acid : C.muted, padding: '2px 6px', fontWeight: 700,
+                                    }}>{short}</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: active ? C.text : C.sub }}>{label}</span>
+                                    <span style={{ marginLeft: 'auto', fontSize: 8, color: active ? C.acid : C.red, fontWeight: 700 }}>
+                                        {active ? '● ACTIVE' : '○ OFFLINE'}
+                                    </span>
+                                </div>
+                                <p style={{ margin: '0 0 8px 0', fontSize: 9, color: C.sub, lineHeight: 1.7 }}>{how}</p>
+                                <div style={{ fontSize: 8, color: C.muted }}>
+                                    <span style={{ color: C.acid, marginRight: 6 }}>DETECTS</span>{catches}
+                                </div>
                             </div>
-                        ) : (
-                            <TrainingTerminal logs={logs} />
-                        )}
+                        ))}
+
+                        <div style={{ padding: '12px 16px', background: '#050505', border: `1px solid #1A1A1A`, fontSize: 8, color: C.sub, lineHeight: 1.8 }}>
+                            <span style={{ color: C.text, fontWeight: 700, letterSpacing: '0.1em' }}>MULTI-LAYER CONSENSUS</span>
+                            <br />
+                            All active engines run in parallel on every scan. Results are combined using a weighted
+                            confidence score — a threat must clear multiple independent detection layers before
+                            Soteria flags your code as malicious. This minimises false positives.
+                        </div>
                     </div>
                 </div>
             </div>

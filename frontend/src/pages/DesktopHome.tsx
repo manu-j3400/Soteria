@@ -335,7 +335,7 @@ export default function DesktopHome() {
       <AppSidebar />
 
       {/* ── Main content area ── */}
-      <div className="flex-1 flex flex-col overflow-hidden md:ml-48" style={{ marginLeft: 0 }}>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ marginLeft: '12rem' }}>
 
         {/* ══ STATUS STRIP ══════════════════════════════════════════════════ */}
         <header className="flex items-center h-9 flex-shrink-0 sticky top-0 z-40"
