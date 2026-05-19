@@ -108,7 +108,7 @@ function Terminal() {
 
 export default function LandingPage() {
     return (
-        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 60%)' }}>
+        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', paddingTop: 72, backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 60%)' }}>
             <PublicNavbar />
 
             {/* ── HERO ─────────────────────────────────────────────────────── */}

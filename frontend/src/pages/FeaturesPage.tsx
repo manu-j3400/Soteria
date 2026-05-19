@@ -33,7 +33,7 @@ const cellStyle: React.CSSProperties = {
 
 export default function FeaturesPage() {
     return (
-        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', paddingTop: 76 }}>
+        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden', paddingTop: 72 }}>
             <PublicNavbar />
 
             {/* HERO */}
