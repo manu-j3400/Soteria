@@ -10,6 +10,7 @@ const SUB = COLORS.sub;
 const FONT = "'JetBrains Mono', 'Courier New', monospace";
 
 const NAV_LINKS = [
+    { path: '/home',        label: 'HOME'        },
     { path: '/features',    label: 'FEATURES'    },
     { path: '/how-it-works',label: 'HOW IT WORKS' },
     { path: '/about',       label: 'ABOUT'        },
@@ -230,7 +231,7 @@ export default function PublicNavbar() {
                                 onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = '0.85'}
                                 onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = '1'}
                             >
-                                GET STARTED →
+                                GET STARTED <span style={{ fontSize: '14px', lineHeight: 1 }}>→</span>
                             </Link>
                         </>
                     )}

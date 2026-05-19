@@ -138,6 +138,604 @@ const C = {
 const sevColor = (s: string) =>
   s === 'CRITICAL' ? C.red : s === 'HIGH' ? C.amber : s === 'MEDIUM' ? '#FFD700' : C.subdued;
 
+// ── Code examples ─────────────────────────────────────────────────────────────
+const CODE_EXAMPLES = [
+  {
+    label: 'SSRF — Webhook validator (Python)',
+    filename: 'webhook.py',
+    code: `import requests
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/webhooks/test', methods=['POST'])
+def test_webhook():
+    """Validates a user-supplied webhook URL by sending a test ping."""
+    data = request.get_json()
+    target_url = data.get('url')
+    secret     = data.get('secret', '')
+
+    if not target_url:
+        return jsonify({'error': 'url required'}), 400
+
+    # No validation — attacker can point to internal services:
+    # http://169.254.169.254/latest/meta-data/  (AWS metadata)
+    # http://localhost:6379  (Redis)
+    # http://10.0.0.1/admin
+    resp = requests.post(
+        target_url,
+        json={'event': 'ping', 'secret': secret},
+        timeout=5,
+    )
+    return jsonify({'status': resp.status_code, 'ok': resp.ok})
+`,
+  },
+  {
+    label: 'Path traversal — report downloader (Python)',
+    filename: 'reports.py',
+    code: `import os
+from flask import Flask, request, send_file, abort
+
+app = Flask(__name__)
+REPORTS_DIR = '/var/app/reports'
+
+@app.route('/download')
+def download_report():
+    """Downloads a report PDF by name."""
+    name = request.args.get('name', '')
+    # No sanitisation — ../../etc/passwd works fine
+    full_path = os.path.join(REPORTS_DIR, name)
+    if not os.path.exists(full_path):
+        abort(404)
+    return send_file(full_path, as_attachment=True)
+
+@app.route('/preview')
+def preview_report():
+    name = request.args.get('name', '')
+    full_path = os.path.join(REPORTS_DIR, name)
+    with open(full_path, 'r') as f:
+        return f.read()
+`,
+  },
+  {
+    label: 'Pickle deserialization (Python)',
+    filename: 'session_store.py',
+    code: `import pickle
+import base64
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+def load_session(token: str) -> dict:
+    """Restores user session from a base64-encoded cookie."""
+    raw = base64.b64decode(token)
+    # Attacker can craft a pickle payload that runs arbitrary code
+    session = pickle.loads(raw)
+    return session
+
+@app.route('/profile')
+def profile():
+    token = request.cookies.get('session')
+    if not token:
+        return jsonify({'error': 'no session'}), 401
+    sess = load_session(token)
+    return jsonify({'user': sess.get('username'), 'role': sess.get('role')})
+
+@app.route('/save_prefs', methods=['POST'])
+def save_prefs():
+    prefs = request.get_json()
+    serialised = base64.b64encode(pickle.dumps(prefs)).decode()
+    return jsonify({'token': serialised})
+`,
+  },
+  {
+    label: 'SSTI — Email template engine (Python)',
+    filename: 'mailer.py',
+    code: `from jinja2 import Environment
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+jinja_env = Environment()
+
+TEMPLATES = {
+    'welcome':  'Hello {{ name }}, welcome to the platform!',
+    'reset':    'Click here to reset: {{ link }}',
+}
+
+@app.route('/api/preview-email', methods=['POST'])
+def preview_email():
+    """Renders a custom email template with user variables."""
+    data     = request.get_json()
+    template = data.get('template', '')
+    context  = data.get('context', {})
+
+    # Renders ARBITRARY user-supplied template string — SSTI
+    # Payload: {{ ''.__class__.__mro__[1].__subclasses__() }}
+    rendered = jinja_env.from_string(template).render(**context)
+    return jsonify({'preview': rendered})
+`,
+  },
+  {
+    label: 'Prototype pollution (JavaScript)',
+    filename: 'config_merge.js',
+    code: `function deepMerge(target, source) {
+    for (const key of Object.keys(source)) {
+        if (source[key] && typeof source[key] === 'object') {
+            // No __proto__ / constructor guard
+            if (!target[key]) target[key] = {};
+            deepMerge(target[key], source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
+}
+
+// Attacker POST body: {"__proto__": {"isAdmin": true}}
+// After merge every object in the process has isAdmin = true
+app.post('/api/settings', (req, res) => {
+    const userSettings = {};
+    deepMerge(userSettings, req.body);
+    db.save(req.user.id, userSettings);
+
+    if (userSettings.isAdmin) {
+        // Unexpectedly true for all users post-pollution
+        grantAdminAccess(req.user.id);
+    }
+    res.json({ saved: true });
+});
+`,
+  },
+  {
+    label: 'JWT algorithm confusion (TypeScript)',
+    filename: 'auth_middleware.ts',
+    code: `import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+
+const PUBLIC_KEY = fs.readFileSync('./keys/public.pem', 'utf8');
+
+export function verifyToken(req: Request, res: Response, next: NextFunction) {
+    const header = req.headers.authorization ?? '';
+    const token  = header.replace('Bearer ', '');
+
+    // VULNERABLE: trusts 'alg' field from the token header itself.
+    // Attacker can set alg=HS256 and sign with the PUBLIC KEY as HMAC secret,
+    // since the public key is often discoverable.
+    const decoded = jwt.verify(token, PUBLIC_KEY, { algorithms: undefined } as any);
+    (req as any).user = decoded;
+    next();
+}
+
+export function issueToken(payload: object): string {
+    return jwt.sign(payload, PUBLIC_KEY, {
+        algorithm: 'RS256',
+        expiresIn:  '7d',
+    });
+}
+`,
+  },
+  {
+    label: 'Race condition — wallet debit (Go)',
+    filename: 'wallet.go',
+    code: `package wallet
+
+import (
+    "errors"
+    "sync"
+)
+
+type Wallet struct {
+    balance float64
+    // No mutex protecting balance reads+writes
+}
+
+var wallets = map[string]*Wallet{}
+var mu sync.Mutex
+
+func Debit(userID string, amount float64) error {
+    w := wallets[userID]
+
+    // Read and write are not atomic — concurrent requests
+    // can both pass the balance check and both debit
+    if w.balance < amount {
+        return errors.New("insufficient funds")
+    }
+
+    // Another goroutine can debit between the check and this line
+    w.balance -= amount
+    return nil
+}
+
+func Credit(userID string, amount float64) {
+    mu.Lock()
+    defer mu.Unlock()
+    wallets[userID].balance += amount
+}
+`,
+  },
+  {
+    label: 'Integer overflow — slab allocator (C)',
+    filename: 'slab.c',
+    code: `#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+typedef struct {
+    uint32_t count;
+    uint32_t item_size;
+    void    *data;
+} Slab;
+
+Slab *slab_create(uint32_t count, uint32_t item_size) {
+    Slab *s = malloc(sizeof(Slab));
+    s->count     = count;
+    s->item_size = item_size;
+
+    // VULNERABLE: count * item_size overflows uint32 for large inputs
+    // e.g. count=0x10000, item_size=0x10000 → wraps to 0 → malloc(0)
+    uint32_t total = count * item_size;
+    s->data = malloc(total);
+    return s;
+}
+
+void slab_write(Slab *s, uint32_t index, void *item) {
+    // No bounds check relative to true allocation size
+    memcpy((char *)s->data + index * s->item_size, item, s->item_size);
+}
+`,
+  },
+  {
+    label: 'Use-after-free — event dispatcher (C++)',
+    filename: 'dispatcher.cpp',
+    code: `#include <vector>
+#include <functional>
+#include <memory>
+
+struct Listener {
+    int id;
+    std::function<void(const std::string&)> callback;
+};
+
+class EventBus {
+    std::vector<Listener*> listeners_;
+public:
+    void subscribe(Listener* l) { listeners_.push_back(l); }
+
+    void unsubscribe(int id) {
+        for (auto it = listeners_.begin(); it != listeners_.end(); ++it) {
+            if ((*it)->id == id) {
+                delete *it;          // freed here
+                listeners_.erase(it);
+                return;
+            }
+        }
+    }
+
+    void emit(const std::string& event) {
+        for (auto* l : listeners_) {
+            l->callback(event);      // may call into freed memory if
+        }                            // unsubscribe called during iteration
+    }
+};
+`,
+  },
+  {
+    label: 'XXE — invoice parser (Java)',
+    filename: 'InvoiceParser.java',
+    code: `import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import java.io.ByteArrayInputStream;
+
+public class InvoiceParser {
+
+    public Document parse(String xmlData) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        // External entities NOT disabled — XXE possible
+        // Attacker payload: <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        return builder.parse(new ByteArrayInputStream(xmlData.getBytes()));
+    }
+
+    public String extractTotal(String xmlData) throws Exception {
+        Document doc = parse(xmlData);
+        NodeList nodes = doc.getElementsByTagName("total");
+        return nodes.item(0).getTextContent();
+    }
+}
+`,
+  },
+  {
+    label: 'Mass assignment — user update (Python)',
+    filename: 'users_api.py',
+    code: `from flask import Flask, request, jsonify
+from models import User, db
+
+app = Flask(__name__)
+
+@app.route('/api/users/<int:user_id>', methods=['PATCH'])
+def update_user(user_id):
+    """Updates a user's profile fields."""
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    # VULNERABLE: sets ANY field from the JSON body directly onto the model
+    # Attacker sends: {"role": "admin", "is_verified": true, "credits": 99999}
+    for key, value in data.items():
+        setattr(user, key, value)
+
+    db.session.commit()
+    return jsonify({'updated': True, 'id': user_id})
+`,
+  },
+  {
+    label: 'Timing attack — API key check (Python)',
+    filename: 'api_auth.py',
+    code: `import hashlib
+from flask import Flask, request, jsonify, abort
+
+app = Flask(__name__)
+
+VALID_API_KEY = "prod-key-a3f9c2b81e74d650"
+
+def verify_key(provided: str) -> bool:
+    # VULNERABLE: early-exit string comparison leaks timing info.
+    # Attacker can measure response time per character to brute-force the key.
+    return provided == VALID_API_KEY
+
+@app.before_request
+def check_auth():
+    key = request.headers.get('X-API-Key', '')
+    if not verify_key(key):
+        abort(401)
+
+@app.route('/api/data')
+def get_data():
+    return jsonify({'records': db.fetch_all()})
+`,
+  },
+  {
+    label: 'Open redirect — OAuth callback (TypeScript)',
+    filename: 'oauth_callback.ts',
+    code: `import { Router, Request, Response } from 'express';
+
+const router = Router();
+
+router.get('/auth/callback', async (req: Request, res: Response) => {
+    const { code, state } = req.query as Record<string, string>;
+
+    // state param was set by client — not validated server-side
+    const redirectTo = state || '/dashboard';
+
+    try {
+        const tokens = await exchangeCode(code);
+        req.session!.tokens = tokens;
+
+        // VULNERABLE: redirectTo is fully attacker-controlled.
+        // Phishing: ?state=https://evil.com/steal
+        res.redirect(redirectTo);
+    } catch (err) {
+        res.redirect('/login?error=oauth_failed');
+    }
+});
+
+export default router;
+`,
+  },
+  {
+    label: 'ReDoS — log line validator (JavaScript)',
+    filename: 'log_validator.js',
+    code: `/**
+ * Validates incoming log lines before writing to storage.
+ * Called on every inbound log event from agents.
+ */
+
+// VULNERABLE: catastrophic backtracking on malicious input
+// e.g. 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!' takes exponential time
+const LOG_LINE_RE = /^(INFO|WARN|ERROR)\\s+(\\w+\\s+)+\\[\\d+\\]$/;
+const IP_RE       = /^([0-9]+\\.)+[0-9]+$/;   // also catastrophic
+
+function validateLogLine(line) {
+    if (line.length > 1024) return false;
+    return LOG_LINE_RE.test(line);
+}
+
+function validateIp(ip) {
+    return IP_RE.test(ip);
+}
+
+// Attacker sends: "INFO " + "a ".repeat(50) + "!"
+// Server hangs processing a single log line (event loop blocked)
+module.exports = { validateLogLine, validateIp };
+`,
+  },
+  {
+    label: 'Insecure deserialization (Java)',
+    filename: 'SessionLoader.java',
+    code: `import java.io.*;
+import java.util.Base64;
+import javax.servlet.http.*;
+
+public class SessionLoader extends HttpServlet {
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws IOException {
+
+        String cookie = req.getHeader("X-Session-Data");
+        if (cookie == null) { resp.sendError(401); return; }
+
+        byte[] raw = Base64.getDecoder().decode(cookie);
+
+        // VULNERABLE: deserialises arbitrary bytes from the client.
+        // Attacker provides a gadget chain (e.g. Commons Collections)
+        // to achieve RCE.
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new ByteArrayInputStream(raw))) {
+            Object session = ois.readObject();
+            req.setAttribute("session", session);
+        } catch (ClassNotFoundException e) {
+            resp.sendError(400);
+        }
+    }
+}
+`,
+  },
+  {
+    label: 'TOCTOU — temp file processing (Python)',
+    filename: 'processor.py',
+    code: `import os
+import tempfile
+import subprocess
+
+def process_upload(data: bytes, filename: str) -> str:
+    """Writes upload to tmp, checks it, then processes it."""
+    tmp_path = f"/tmp/{filename}"
+
+    with open(tmp_path, 'wb') as f:
+        f.write(data)
+
+    # TOCTOU: attacker replaces /tmp/{filename} with a symlink
+    # to /etc/passwd between the check and the read below
+    if not os.path.isfile(tmp_path):
+        raise ValueError("not a file")
+
+    if os.path.getsize(tmp_path) > 10_000_000:
+        os.remove(tmp_path)
+        raise ValueError("too large")
+
+    # Gap here — symlink swap window
+    result = subprocess.check_output(['file', tmp_path])
+    return result.decode()
+`,
+  },
+  {
+    label: 'Format string — C diagnostics',
+    filename: 'diagnostics.c',
+    code: `#include <stdio.h>
+#include <syslog.h>
+#include <string.h>
+
+#define MAX_MSG 512
+
+void log_event(const char *user_message) {
+    char buf[MAX_MSG];
+    // VULNERABLE: user_message used directly as format string
+    // Attacker sends "%x %x %x %n" to read/write stack memory
+    snprintf(buf, sizeof(buf), user_message);
+    syslog(LOG_INFO, buf);
+}
+
+void report_error(const char *component, const char *detail) {
+    // VULNERABLE: detail not sanitised before being used as format
+    char msg[256];
+    sprintf(msg, detail);
+    fprintf(stderr, "[%s] %s\\n", component, msg);
+}
+
+int main(int argc, char **argv) {
+    if (argc > 1) log_event(argv[1]);
+    return 0;
+}
+`,
+  },
+  {
+    label: 'Local file inclusion (PHP)',
+    filename: 'page_loader.php',
+    code: `<?php
+/**
+ * Loads page templates based on the ?page= query parameter.
+ * Templates live in /var/www/html/templates/
+ */
+
+$page = $_GET['page'] ?? 'home';
+
+// Strip .php extension if provided
+$page = str_replace('.php', '', $page);
+
+// VULNERABLE: no whitelist, path not normalised
+// ?page=../../../../etc/passwd%00 (null byte)
+// ?page=../config/database
+// ?page=php://filter/convert.base64-encode/resource=index
+$template = __DIR__ . '/templates/' . $page . '.php';
+
+if (file_exists($template)) {
+    include $template;
+} else {
+    include __DIR__ . '/templates/404.php';
+}
+?>
+`,
+  },
+  {
+    label: 'Unvalidated file upload (Python)',
+    filename: 'upload_handler.py',
+    code: `import os
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+UPLOAD_DIR = '/var/www/uploads'
+
+@app.route('/api/upload/avatar', methods=['POST'])
+def upload_avatar():
+    """Accepts a profile picture upload."""
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'no file'}), 400
+
+    # Only checks the MIME type header — easily spoofed
+    if f.content_type not in ('image/jpeg', 'image/png'):
+        return jsonify({'error': 'invalid type'}), 400
+
+    # Saves with the original filename — path traversal + .php upload
+    # e.g. filename="../../cgi-bin/shell.php"
+    dest = os.path.join(UPLOAD_DIR, f.filename)
+    f.save(dest)
+
+    public_url = f'/uploads/{f.filename}'
+    return jsonify({'url': public_url})
+`,
+  },
+  {
+    label: 'Hardcoded creds + weak crypto (Go)',
+    filename: 'db_connect.go',
+    code: `package database
+
+import (
+    "crypto/md5"
+    "database/sql"
+    "fmt"
+    _ "github.com/lib/pq"
+)
+
+const (
+    DB_HOST = "prod-db.internal"
+    DB_USER = "admin"
+    DB_PASS = "Adm1nP@ssw0rd2024!"   // hardcoded production password
+    DB_NAME = "customers"
+)
+
+func Connect() (*sql.DB, error) {
+    dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+        DB_HOST, DB_USER, DB_PASS, DB_NAME)
+    return sql.Open("postgres", dsn)
+}
+
+// VULNERABLE: MD5 is cryptographically broken — do not use for passwords
+func HashPassword(password string) string {
+    sum := md5.Sum([]byte(password))
+    return fmt.Sprintf("%x", sum)
+}
+
+func VerifyPassword(password, hash string) bool {
+    return HashPassword(password) == hash
+}
+`,
+  },
+];
+
 // ── Component ────────────────────────────────────────────────────────────────
 export default function Scanner() {
   const { token } = useAuth();
@@ -156,6 +754,7 @@ export default function Scanner() {
   const [toastError, setToastError]           = useState<string | null>(null);
   const [historyOpen, setHistoryOpen]         = useState(false);
   const [feedbackSent, setFeedbackSent]       = useState(false);
+  const [examplesOpen, setExamplesOpen]       = useState(false);
   const llmOutputRef                          = useRef('');
   const fileInputRef                          = useRef<HTMLInputElement>(null);
   const resultsRef                            = useRef<HTMLDivElement>(null);
@@ -198,13 +797,23 @@ export default function Scanner() {
           vulnerabilities: result.vulnerabilities || []
         })
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') ?? '';
+        const msg = ct.includes('json')
+          ? ((await res.json()).error ?? `HTTP ${res.status}`)
+          : `HTTP ${res.status}`;
+        showError(`PDF failed: ${msg}`);
+        return;
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `Soteria_Report_${Date.now()}.pdf`;
       document.body.appendChild(a); a.click(); a.remove();
-    } catch { showError('Could not generate report. Backend offline?'); }
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      showError(`PDF failed: ${err instanceof Error ? err.message : 'Network error'}`);
+    }
   };
 
   const analyzeCode = async () => {
@@ -485,6 +1094,61 @@ export default function Scanner() {
               [ UPLOAD ]
             </button>
             <input ref={fileInputRef} type="file" accept={ACCEPT_STRING} onChange={handleFileInput} style={{ display: 'none' }} />
+            {/* Examples dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setExamplesOpen(o => !o)}
+                style={{
+                  height: '100%', padding: '0 14px', background: 'transparent',
+                  border: 'none', borderRight: `1px solid ${C.border}`,
+                  color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10, cursor: 'pointer', letterSpacing: '0.08em',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = C.acid)}
+                onMouseLeave={e => (e.currentTarget.style.color = C.subdued)}
+              >
+                [ EXAMPLES ▾ ]
+              </button>
+              {examplesOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, zIndex: 100,
+                  background: '#0D1829', border: `1px solid ${C.border}`,
+                  minWidth: '240px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  maxHeight: '60vh', overflowY: 'auto',
+                }}>
+                  {CODE_EXAMPLES.map((ex) => (
+                    <button
+                      key={ex.label}
+                      onClick={() => {
+                        setCode(ex.code);
+                        setFilename(ex.filename);
+                        setResult({ status: 'waiting' });
+                        setExamplesOpen(false);
+                      }}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '10px 16px', background: 'transparent',
+                        border: 'none', borderBottom: `1px solid ${C.border}`,
+                        color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10, cursor: 'pointer', letterSpacing: '0.06em',
+                        transition: 'background 0.1s, color 0.1s',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = C.border;
+                        e.currentTarget.style.color = C.text;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = C.subdued;
+                      }}
+                    >
+                      {ex.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action bar */}
@@ -510,10 +1174,10 @@ export default function Scanner() {
               {result.status === 'loading' ? '[ SCANNING... ]' : '[ ANALYZE ]'}
             </button>
 
-            {/* Re-run Kyber scan button — only when done/error */}
-            {hasResults && (deepScanStatus === 'done' || deepScanStatus === 'error') && (
+            {/* Re-run full analysis — only when a result exists */}
+            {hasResults && (
               <button
-                onClick={() => startDeepScan()}
+                onClick={() => analyzeCode()}
                 style={{
                   height: '100%', flex: '0 0 auto', padding: '0 20px',
                   background: 'transparent', border: 'none',
