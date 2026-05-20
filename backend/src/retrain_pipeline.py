@@ -217,9 +217,25 @@ def run_retrain(
         except Exception as e:
             print(f'[retrain] Warning: could not load cve_features.csv: {e}')
 
-    orig_df = pd.concat(frames, ignore_index=True)
-    X_orig = orig_df.reindex(columns=feature_cols, fill_value=0).fillna(0)
-    y_orig = orig_df['LABEL'].astype(int)
+    # Hold out a base-only test set before merging CVE data.
+    # This ensures fair comparison: old model and new model are evaluated on the
+    # same distribution the old model was trained on.
+    base_X = base_df.reindex(columns=feature_cols, fill_value=0).fillna(0)
+    base_y = base_df['LABEL'].astype(int)
+    X_base_train, X_test, y_base_train, y_test = train_test_split(
+        base_X, base_y, test_size=0.15, random_state=42, stratify=base_y,
+    )
+
+    # Build full training set: base train split + CVE data + user-labeled scans
+    train_frames_X = [X_base_train]
+    train_frames_y = [y_base_train]
+
+    if len(frames) > 1:  # CVE data was appended
+        cve_only = pd.concat(frames[1:], ignore_index=True)
+        cve_X = cve_only.reindex(columns=feature_cols, fill_value=0).fillna(0)
+        cve_y = cve_only['LABEL'].astype(int)
+        train_frames_X.append(cve_X)
+        train_frames_y.append(cve_y)
 
     # 2. Load labeled scans
     labeled = _get_labeled_scans(db_path)
@@ -232,25 +248,19 @@ def run_retrain(
         )
         return result
 
-    # 3. Extract features from new user-labeled samples (optional)
+    # 3. Extract features from new user-labeled samples
     if labeled:
         X_new, y_new = _build_features_df(labeled, feature_cols)
         result['new_samples'] = len(X_new)
         if len(X_new) > 0:
-            X_orig = pd.concat([X_orig, X_new], ignore_index=True)
-            y_orig = pd.concat([y_orig, y_new], ignore_index=True)
+            train_frames_X.append(X_new)
+            train_frames_y.append(y_new)
 
-    # 4. Combined dataset (orig CSV + CVE CSV + any user-labeled scans)
-    X_combined = X_orig
-    y_combined = y_orig
+    # 4. Combined training set
+    X_train = pd.concat(train_frames_X, ignore_index=True)
+    y_train = pd.concat(train_frames_y, ignore_index=True)
 
-    # 5. Split — same ratio as original training
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_combined, y_combined,
-        test_size=0.15, random_state=42, stratify=y_combined,
-    )
-
-    # 6. Baseline: evaluate current model on same test split
+    # 5. Baseline: evaluate current model on base-only test split
     try:
         current_model = load(model_path)
         y_pred_old = current_model.predict(X_test)
@@ -260,7 +270,7 @@ def run_retrain(
         result['reason'] = f'Could not evaluate current model: {e}'
         return result
 
-    # 7. Train new model
+    # 6. Train new model on combined data
     new_model = _build_ensemble()
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=RuntimeWarning)
@@ -270,7 +280,7 @@ def run_retrain(
     new_f1 = round(float(f1_score(y_test, y_pred_new, pos_label=1, zero_division=0)), 4)
     result['new_f1'] = new_f1
 
-    # 8. Swap only if malicious-class F1 improved
+    # 7. Swap only if malicious-class F1 improved
     improved = new_f1 > old_f1
     if improved and not dry_run:
         dump(new_model, model_path)
