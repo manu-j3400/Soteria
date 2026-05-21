@@ -75,3 +75,17 @@ engines/ruflo/soteria-mcp/package-lock.json
 
 # Claude Code local config
 .claude/
+
+# AI coding tool artifacts (Jules, Codex, Playwright MCP, agents)
+.Jules/
+.agents/
+.codex/
+.playwright-mcp/
+
+# CVE scraper output — large generated files, may contain scraped code
+backend/CSV_master/cve_features.csv
+backend/CSV_master/.cve_scraper_state.json
+
+# Temporary test screenshots
+result_*.png
+scanner_*.png
