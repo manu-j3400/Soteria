@@ -618,6 +618,17 @@ def init_scan_db():
         user_id INTEGER DEFAULT NULL
     )''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS retrain_log (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp   TEXT NOT NULL,
+        status      TEXT NOT NULL,
+        new_samples INTEGER,
+        old_f1      REAL,
+        new_f1      REAL,
+        swapped     INTEGER,
+        reason      TEXT
+    )''')
+
     # Schema version tracking
     c.execute('''CREATE TABLE IF NOT EXISTS schema_version (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1761,20 +1772,9 @@ def analyze(current_user):
 
     _feat_row = featuresDf.iloc[0].to_dict() if not featuresDf.empty else {}
     _features = {
-        'max_entropy':           _feat_row.get('max_entropy', 0),
-        'mean_entropy':          _feat_row.get('mean_entropy', 0),
-        'n_high_entropy_nodes':  _feat_row.get('n_high_entropy_nodes', 0),
-        'cyclomatic_complexity': _feat_row.get('cyclomatic_complexity', 0),
-        'n_dangerous_calls':     _feat_row.get('n_dangerous_calls', 0),
-        'n_suspicious_imports':  _feat_row.get('n_suspicious_imports', 0),
-        'import_count':          _feat_row.get('import_count', 0),
-        'n_sql_sink_calls':      _feat_row.get('n_sql_sink_calls', 0),
-        'has_sql_concat':        _feat_row.get('has_sql_concat', 0),
-        'n_user_input_sources':  _feat_row.get('n_user_input_sources', 0),
-        'taint_reaches_sql':     _feat_row.get('taint_reaches_sql', 0),
-        'taint_reaches_shell':   _feat_row.get('taint_reaches_shell', 0),
-        'gcn_prob':              result.get('metadata', {}).get('gcn_probability'),
-        'rf_confidence':         confidence,
+        **_feat_row,  # full RF vector: all ~101 AST + engineered feature columns
+        'gcn_prob':      result.get('metadata', {}).get('gcn_probability'),
+        'rf_confidence': confidence,
     }
 
     scan_id = save_scan_result(
@@ -2533,6 +2533,87 @@ def set_webhook_setting(current_user):
 _retrain_state: dict = {'status': 'idle', 'result': None}
 _retrain_lock  = threading.Lock()
 
+_DRIFT_AUTO_RETRAIN_THRESHOLD = 0.15
+_DRIFT_CHECK_INTERVAL = 6 * 3600  # 6 hours
+
+
+def _persist_retrain_log(res: dict) -> None:
+    """Write a retrain result row to the persistent retrain_log table."""
+    try:
+        with _db_lock:
+            conn = get_db_connection()
+            conn.execute(
+                '''INSERT INTO retrain_log
+                   (timestamp, status, new_samples, old_f1, new_f1, swapped, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    datetime.now(timezone.utc).isoformat(),
+                    res.get('status', 'error'),
+                    res.get('new_samples', 0),
+                    res.get('old_f1'),
+                    res.get('new_f1'),
+                    1 if res.get('swapped') else 0,
+                    res.get('reason', ''),
+                )
+            )
+            conn.commit()
+            conn.close()
+    except Exception as _log_err:
+        print(f'[retrain] Could not persist log: {_log_err}')
+
+
+def _maybe_auto_retrain() -> None:
+    """Trigger retrain if KL divergence exceeds threshold and pipeline is idle."""
+    with _GCN_DRIFT_LOCK:
+        buf = list(_GCN_PROB_BUFFER)
+        baseline = list(_GCN_DRIFT_BASELINE)
+    if len(buf) < 50 or len(baseline) < 10:
+        return
+    recent = buf[-min(100, len(buf)):]
+    kl = _kl_divergence(baseline, recent)
+    if kl < _DRIFT_AUTO_RETRAIN_THRESHOLD:
+        return
+    with _retrain_lock:
+        if _retrain_state['status'] == 'running':
+            return
+        _retrain_state['status'] = 'running'
+        _retrain_state['result'] = None
+
+    print(f'[drift-auto-retrain] KL={kl:.4f} > threshold — auto-triggering retrain')
+
+    def _run():
+        try:
+            sys.path.insert(0, str(ROOT / 'backend' / 'src'))
+            from retrain_pipeline import run_retrain  # type: ignore[import]
+            res = run_retrain(min_new_samples=20)
+            if res.get('swapped'):
+                load_model_if_updated()
+            with _retrain_lock:
+                _retrain_state['status'] = 'done'
+                _retrain_state['result'] = res
+            _persist_retrain_log(res)
+        except Exception as exc:
+            with _retrain_lock:
+                _retrain_state['status'] = 'failed'
+                _retrain_state['result'] = {'status': 'error', 'reason': str(exc)}
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _drift_auto_retrain_loop() -> None:
+    """Background daemon: check drift every 6h, auto-retrain if threshold exceeded."""
+    import time as _time
+    _time.sleep(300)  # 5-min startup grace period
+    while True:
+        try:
+            _maybe_auto_retrain()
+        except Exception as e:
+            print(f'[drift-auto-retrain] Error: {e}')
+        _time.sleep(_DRIFT_CHECK_INTERVAL)
+
+
+threading.Thread(target=_drift_auto_retrain_loop, daemon=True).start()
+
 
 @app.route('/api/admin/retrain', methods=['POST'])
 @token_required(optional=False)
@@ -2579,6 +2660,7 @@ def trigger_retrain(current_user):
             with _retrain_lock:
                 _retrain_state['status'] = 'done'
                 _retrain_state['result'] = res
+            _persist_retrain_log(res)
         except Exception as exc:
             with _retrain_lock:
                 _retrain_state['status'] = 'failed'
@@ -2613,6 +2695,35 @@ def retrain_status(current_user):
             'status': _retrain_state['status'],
             'result': _retrain_state['result'],
         })
+
+
+@app.route('/api/admin/retrain/history', methods=['GET'])
+@token_required(optional=False)
+def retrain_history(current_user):
+    """
+    Return last N retrain events from persistent log.
+    ---
+    tags: [Admin]
+    security: [{Bearer: []}]
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+    responses:
+      200: {description: List of retrain log entries}
+      403: {description: Admin only}
+    """
+    if not current_user.get('is_admin'):
+        return jsonify({'error': 'Admin access required'}), 403
+    limit = min(int(request.args.get('limit', 20)), 100)
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        'SELECT * FROM retrain_log ORDER BY id DESC LIMIT ?', (limit,)
+    ).fetchall()
+    conn.close()
+    return jsonify({'history': [dict(r) for r in rows]})
 
 
 @app.route('/api/model/drift', methods=['GET'])

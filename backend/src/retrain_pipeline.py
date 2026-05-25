@@ -97,6 +97,52 @@ def _get_labeled_scans(db_path: Path) -> list[dict[str, Any]]:
         return []
 
 
+def _get_labeled_features_direct(
+    db_path: Path,
+    feature_cols: list[str],
+) -> 'tuple[pd.DataFrame, pd.Series] | None':
+    """
+    Fast path: read stored features JSON from scans table directly.
+    Returns (X, y) aligned to feature_cols, or None if no qualifying rows.
+    Skips rows where features IS NULL (old scans before full-vector storage).
+    """
+    import json as _json
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            '''SELECT features, malicious, user_label
+               FROM scans
+               WHERE user_label IS NOT NULL
+                 AND features IS NOT NULL'''
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return None
+
+    X_rows, y_vals = [], []
+    for r in rows:
+        try:
+            feat = _json.loads(r['features'])
+        except Exception:
+            continue
+        # Derive ground truth: user_label=1 → verdict correct, 0 → flip
+        is_malicious = int(r['malicious'])
+        if r['user_label'] == 0:
+            is_malicious = 1 - is_malicious
+        X_rows.append(feat)
+        y_vals.append(is_malicious)
+
+    if not X_rows:
+        return None
+
+    X = pd.DataFrame(X_rows).reindex(columns=feature_cols, fill_value=0).fillna(0)
+    y = pd.Series(y_vals, dtype=int)
+    return X, y
+
+
 # ── Feature DataFrame builder ─────────────────────────────────────────────────
 
 def _build_features_df(
@@ -237,19 +283,32 @@ def run_retrain(
         train_frames_X.append(cve_X)
         train_frames_y.append(cve_y)
 
-    # 2. Load labeled scans
-    labeled = _get_labeled_scans(db_path)
-    result['new_samples'] = len(labeled)
-    if len(labeled) < min_new_samples:
-        result['status'] = 'skipped'
-        result['reason'] = (
-            f'Only {len(labeled)} labeled samples available '
-            f'(minimum required: {min_new_samples})'
-        )
-        return result
-
-    # 3. Extract features from new user-labeled samples
-    if labeled:
+    # 2. Load labeled scans — direct path first, JOIN fallback for legacy rows
+    direct = _get_labeled_features_direct(db_path, feature_cols)
+    if direct is not None:
+        X_new, y_new = direct
+        result['new_samples'] = len(X_new)
+        if len(X_new) < min_new_samples:
+            result['status'] = 'skipped'
+            result['reason'] = (
+                f'Only {len(X_new)} labeled samples '
+                f'(minimum required: {min_new_samples})'
+            )
+            return result
+        if len(X_new) > 0:
+            train_frames_X.append(X_new)
+            train_frames_y.append(y_new)
+    else:
+        # Legacy fallback: re-extract from code via training_data JOIN
+        labeled = _get_labeled_scans(db_path)
+        result['new_samples'] = len(labeled)
+        if len(labeled) < min_new_samples:
+            result['status'] = 'skipped'
+            result['reason'] = (
+                f'Only {len(labeled)} labeled samples '
+                f'(minimum required: {min_new_samples})'
+            )
+            return result
         X_new, y_new = _build_features_df(labeled, feature_cols)
         result['new_samples'] = len(X_new)
         if len(X_new) > 0:
