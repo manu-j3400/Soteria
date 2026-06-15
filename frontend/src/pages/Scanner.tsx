@@ -1410,17 +1410,28 @@ export default function Scanner() {
                   )}
 
                   {/* User feedback */}
-                  {result.scanId && result.malicious && (
+                  {result.scanId && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8, alignItems: 'center' }}>
                       {feedbackSent ? (
-                        <span style={{ fontSize: 9, color: C.acid, letterSpacing: '0.1em' }}>[ ✓ REPORTED ]</span>
+                        <span style={{ fontSize: 9, color: C.acid, letterSpacing: '0.1em' }}>[ ✓ FEEDBACK RECEIVED ]</span>
                       ) : (
-                        <button onClick={() => submitFeedback(false)}
-                          style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
-                                   color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                                   letterSpacing: '0.08em', cursor: 'pointer' }}>
-                          [ REPORT FALSE POSITIVE ]
-                        </button>
+                        <>
+                          <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.1em', marginRight: 4, alignSelf: 'center' }}>
+                            VERDICT ACCURATE?
+                          </div>
+                          <button onClick={() => submitFeedback(true)}
+                            style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
+                                     color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                                     letterSpacing: '0.08em', cursor: 'pointer' }}>
+                            [ ✓ YES ]
+                          </button>
+                          <button onClick={() => submitFeedback(false)}
+                            style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
+                                     color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                                     letterSpacing: '0.08em', cursor: 'pointer' }}>
+                            [ ✗ WRONG ]
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
