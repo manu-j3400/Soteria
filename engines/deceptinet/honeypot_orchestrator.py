@@ -16,7 +16,9 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Dict, List, Optional
+import threading
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -30,6 +32,29 @@ logger = logging.getLogger(__name__)
 _ATTACKER_TYPE_NAMES: List[str] = [t.value for t in AttackerType]
 _ROLLOUT_STEPS: int = 512   # steps to collect before each PPO update
 _UPDATE_EPOCHS: int = 4     # number of PPO update epochs per rollout
+
+
+@dataclass
+class OrchestratorConfig:
+    n_nodes: int = 20
+    honeypot_ratio: float = 0.3
+    n_particles: int = 500
+    device: str = "cpu"
+    tick_interval_s: float = 5.0
+    seed: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "OrchestratorConfig":
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class TickResult:
+    tick_id: int
+    chosen_action: str
+    reward: float
+    belief_summary: Dict[str, float]
+    env_render: Dict[str, Any] = field(default_factory=dict)
 
 
 class HoneypotOrchestrator:
@@ -51,6 +76,8 @@ class HoneypotOrchestrator:
 
     def __init__(
         self,
+        config: Optional[OrchestratorConfig] = None,
+        # Legacy kwargs kept for backwards compatibility
         n_nodes: int = 20,
         honeypot_ratio: float = 0.3,
         checkpoint_path: Optional[str] = None,
@@ -58,6 +85,13 @@ class HoneypotOrchestrator:
         n_particles: int = 500,
         seed: Optional[int] = None,
     ) -> None:
+        if config is not None:
+            n_nodes       = config.n_nodes
+            honeypot_ratio= config.honeypot_ratio
+            n_particles   = config.n_particles
+            device        = config.device
+            seed          = config.seed
+
         self._model = HypergameModel(n_nodes=n_nodes, honeypot_ratio=honeypot_ratio)
         self._pf    = BeliefStateParticleFilter(n_particles=n_particles)
         self._env   = HoneypotEnv(n_nodes=n_nodes, honeypot_ratio=honeypot_ratio,
@@ -67,12 +101,109 @@ class HoneypotOrchestrator:
             n_actions=HoneypotEnv.n_actions,
             device=device,
         )
-        self._device = device
+        self._device   = device
         self._obs: Optional[np.ndarray] = self._env.reset()
+        self._tick_id  = 0
+        self._rollout_buffer: List[Dict] = []
+        self._alert_queue: List[Dict] = []
+        self._alert_lock  = threading.Lock()
+        self._started      = False
 
         if checkpoint_path and os.path.isfile(checkpoint_path):
             self.load(checkpoint_path)
             logger.info("DeceptiNet checkpoint loaded from %s", checkpoint_path)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def start(self) -> None:
+        """Initialise runtime state. Must be called before tick()."""
+        if not self._started:
+            self._obs = self._env.reset()
+            self._started = True
+            logger.info("DeceptiNet orchestrator started")
+
+    def ingest_alert(self, alert: Dict) -> None:
+        """Queue a raw network alert for processing on the next tick()."""
+        if not isinstance(alert, dict):
+            raise ValueError("alert must be a dict")
+        with self._alert_lock:
+            self._alert_queue.append(alert)
+
+    def tick(self) -> TickResult:
+        """
+        Consume queued alerts, step the environment once, optionally update PPO.
+
+        Returns a TickResult with the chosen action and current belief.
+        """
+        # Drain alert queue and fold into observation via particle filter
+        with self._alert_lock:
+            alerts = self._alert_queue[:]
+            self._alert_queue.clear()
+
+        belief = self._pf.update(alerts[0] if alerts else {}, self._model)
+
+        if self._obs is not None:
+            obs = self._obs.copy()
+            obs[:len(belief)] = belief
+        else:
+            obs = np.concatenate([belief, np.zeros(5, dtype=np.float32)])
+
+        action_idx, log_prob, value = self._agent.select_action(obs)
+        next_obs, reward, done, _ = self._env.step(action_idx)
+
+        self._rollout_buffer.append({
+            "obs": obs, "action": action_idx, "log_prob": log_prob,
+            "reward": reward, "value": value, "done": done,
+        })
+
+        if done:
+            self._obs = self._env.reset()
+        else:
+            self._obs = next_obs
+
+        # PPO update every _ROLLOUT_STEPS steps
+        if len(self._rollout_buffer) >= _ROLLOUT_STEPS:
+            for _ in range(_UPDATE_EPOCHS):
+                self._agent.update(self._rollout_buffer)
+            self._rollout_buffer.clear()
+
+        defender_action: DefenderAction = _ACTIONS[action_idx]
+        self._tick_id += 1
+
+        env_render: Dict[str, Any] = {}
+        if self._env._state is not None:
+            nodes = self._env._state.nodes
+            env_render = {
+                "n_compromised": sum(1 for n in nodes.values() if n.compromised),
+                "n_honeypots":   sum(1 for n in nodes.values() if n.is_honeypot),
+                "n_patched":     sum(1 for n in nodes.values() if n.is_patched),
+            }
+
+        return TickResult(
+            tick_id=self._tick_id,
+            chosen_action=defender_action.value,
+            reward=float(reward),
+            belief_summary={_ATTACKER_TYPE_NAMES[i]: float(belief[i]) for i in range(len(_ATTACKER_TYPE_NAMES))},
+            env_render=env_render,
+        )
+
+    def status(self) -> Dict[str, Any]:
+        """Return a JSON-safe health/state summary."""
+        with self._alert_lock:
+            pending = len(self._alert_queue)
+        return {
+            "started":         self._started,
+            "tick_id":         self._tick_id,
+            "pending_alerts":  pending,
+            "rollout_buffer":  len(self._rollout_buffer),
+            "n_nodes":         self._env.n_nodes if hasattr(self._env, 'n_nodes') else None,
+        }
+
+    def load_checkpoint(self, path: str) -> None:
+        """Load PPO weights from path (alias for load() used by server.py)."""
+        self.load(path)
 
     # ------------------------------------------------------------------
     # Inference

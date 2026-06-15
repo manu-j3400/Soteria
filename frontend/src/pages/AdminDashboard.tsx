@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/context/AdminContext';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, LogOut, UserPlus, Activity, AlertTriangle, Database, Download } from 'lucide-react';
+import { Shield, Users, LogOut, UserPlus, Activity, AlertTriangle, Database, Download, RefreshCw, Cpu, History } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
@@ -35,6 +35,31 @@ interface TrainingStats {
     last_collected: string | null;
 }
 
+interface RetrainHistoryRecord {
+    id: number;
+    timestamp: string;
+    status: string;
+    new_samples: number;
+    old_f1: number | null;
+    new_f1: number | null;
+    swapped: number;
+    reason: string;
+}
+
+interface RetrainStatus {
+    status: 'idle' | 'running' | 'done' | 'failed';
+    result: Record<string, unknown> | null;
+}
+
+interface DriftStatus {
+    status: string;
+    total_samples: number;
+    kl_divergence: number;
+    drift_alert: boolean;
+    recent_mean: number;
+    baseline_mean: number | null;
+}
+
 export default function AdminDashboard() {
     const { adminUser, adminToken, adminLogout } = useAdmin();
     const navigate = useNavigate();
@@ -45,6 +70,10 @@ export default function AdminDashboard() {
     const [trainingLoading, setTrainingLoading] = useState(true);
     const [exportingTraining, setExportingTraining] = useState(false);
     const [exportToast, setExportToast] = useState<{ msg: string; ok: boolean } | null>(null);
+    const [retrainHistory, setRetrainHistory] = useState<RetrainHistoryRecord[]>([]);
+    const [retrainStatus, setRetrainStatus] = useState<RetrainStatus>({ status: 'idle', result: null });
+    const [driftStatus, setDriftStatus] = useState<DriftStatus | null>(null);
+    const [triggeringRetrain, setTriggeringRetrain] = useState(false);
 
     useEffect(() => {
         if (!adminToken) return;
@@ -72,7 +101,48 @@ export default function AdminDashboard() {
             .then(data => setTrainingStats(data))
             .catch(err => console.error(err))
             .finally(() => setTrainingLoading(false));
+
+        // Drift + retrain data
+        Promise.all([
+            fetch(`${API_BASE_URL}/api/model/drift`, { headers: { 'Authorization': `Bearer ${adminToken}` } }),
+            fetch(`${API_BASE_URL}/api/admin/retrain/status`, { headers: { 'Authorization': `Bearer ${adminToken}` } }),
+            fetch(`${API_BASE_URL}/api/admin/retrain/history?limit=20`, { headers: { 'Authorization': `Bearer ${adminToken}` } }),
+        ]).then(async ([driftRes, statusRes, historyRes]) => {
+            if (driftRes.ok) setDriftStatus(await driftRes.json());
+            if (statusRes.ok) setRetrainStatus(await statusRes.json());
+            if (historyRes.ok) {
+                const h = await historyRes.json();
+                setRetrainHistory(h.history || []);
+            }
+        }).catch(err => console.error(err));
     }, [adminToken]);
+
+    // Poll retrain status while running
+    useEffect(() => {
+        if (retrainStatus.status !== 'running') return;
+        const iv = setInterval(() => {
+            if (!adminToken) return;
+            fetch(`${API_BASE_URL}/api/admin/retrain/status`, { headers: { 'Authorization': `Bearer ${adminToken}` } })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) setRetrainStatus(data); })
+                .catch(() => {});
+        }, 5000);
+        return () => clearInterval(iv);
+    }, [retrainStatus.status, adminToken]);
+
+    const handleTriggerRetrain = useCallback(async (dryRun = false) => {
+        if (!adminToken || triggeringRetrain) return;
+        setTriggeringRetrain(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/retrain`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dry_run: dryRun, min_samples: 10 }),
+            });
+            if (res.ok) setRetrainStatus({ status: 'running', result: null });
+        } catch (err) { console.error(err); }
+        finally { setTriggeringRetrain(false); }
+    }, [adminToken, triggeringRetrain]);
 
     const handleLogout = () => {
         adminLogout();
@@ -226,6 +296,190 @@ export default function AdminDashboard() {
                         </div>
                         <p className="text-3xl font-black">{loading ? '—' : criticalScans}</p>
                     </div>
+                </div>
+
+                {/* Model Drift + Retrain Status */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Drift Monitor */}
+                    <div className="rounded-2xl bg-neutral-950 border border-white/[0.06] overflow-hidden">
+                        <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Cpu className="w-4 h-4 text-amber-400" />
+                                <h2 className="text-sm font-bold text-neutral-300 uppercase tracking-widest">Model Drift</h2>
+                            </div>
+                            {driftStatus?.drift_alert && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">DRIFT DETECTED</span>
+                            )}
+                            {driftStatus && !driftStatus.drift_alert && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">STABLE</span>
+                            )}
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {!driftStatus ? (
+                                <p className="text-sm text-neutral-600">Insufficient data (need 10+ GCN scans)</p>
+                            ) : (
+                                <>
+                                    <div>
+                                        <div className="flex justify-between text-xs mb-1">
+                                            <span className="text-neutral-400">KL Divergence</span>
+                                            <span className="font-mono text-white font-bold">{driftStatus.kl_divergence.toFixed(4)}</span>
+                                        </div>
+                                        <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{
+                                                    width: `${Math.min(driftStatus.kl_divergence / 0.5 * 100, 100)}%`,
+                                                    background: driftStatus.kl_divergence > 0.5 ? '#ef4444' : driftStatus.kl_divergence > 0.15 ? '#f59e0b' : '#10b981',
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 text-xs">
+                                        <div className="p-3 rounded-lg bg-neutral-900 border border-white/[0.04]">
+                                            <p className="text-neutral-500 mb-1">Recent Mean</p>
+                                            <p className="font-mono font-bold text-white">{driftStatus.recent_mean.toFixed(4)}</p>
+                                        </div>
+                                        <div className="p-3 rounded-lg bg-neutral-900 border border-white/[0.04]">
+                                            <p className="text-neutral-500 mb-1">Baseline Mean</p>
+                                            <p className="font-mono font-bold text-white">{driftStatus.baseline_mean?.toFixed(4) ?? '—'}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-neutral-600">{driftStatus.total_samples} samples in buffer</p>
+                                </>
+                            )}
+                            <div className="flex gap-2 pt-2">
+                                <Button
+                                    onClick={() => handleTriggerRetrain(false)}
+                                    disabled={triggeringRetrain || retrainStatus.status === 'running'}
+                                    className="flex-1 h-8 text-xs border border-amber-600/40 bg-amber-600/10 text-amber-400 hover:bg-amber-600/20 disabled:opacity-40"
+                                >
+                                    <RefreshCw className="w-3 h-3 mr-1.5" />
+                                    Trigger Retrain
+                                </Button>
+                                <Button
+                                    onClick={() => handleTriggerRetrain(true)}
+                                    disabled={triggeringRetrain || retrainStatus.status === 'running'}
+                                    className="h-8 text-xs border border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 disabled:opacity-40"
+                                >
+                                    Dry Run
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Retrain Status */}
+                    <div className="rounded-2xl bg-neutral-950 border border-white/[0.06] overflow-hidden">
+                        <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 text-purple-400" />
+                            <h2 className="text-sm font-bold text-neutral-300 uppercase tracking-widest">Retrain Status</h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                {retrainStatus.status === 'running' && (
+                                    <div className="w-4 h-4 rounded-full border-2 border-neutral-700 border-t-purple-400 animate-spin flex-shrink-0" />
+                                )}
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                    retrainStatus.status === 'done' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : retrainStatus.status === 'running' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                    : retrainStatus.status === 'failed' ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                    : 'bg-neutral-800 text-neutral-500 border-neutral-700'
+                                }`}>
+                                    {retrainStatus.status.toUpperCase()}
+                                </span>
+                            </div>
+                            {retrainStatus.status === 'running' && (
+                                <p className="text-sm text-neutral-400">Retraining RF ensemble on new labeled data…</p>
+                            )}
+                            {retrainStatus.result && (
+                                <div className="space-y-2 text-xs font-mono">
+                                    {['new_samples','old_f1','new_f1','swapped','reason'].map(k => {
+                                        const v = (retrainStatus.result as Record<string, unknown>)[k];
+                                        if (v === undefined || v === null) return null;
+                                        return (
+                                            <div key={k} className="flex justify-between gap-4">
+                                                <span className="text-neutral-500">{k}</span>
+                                                <span className="text-neutral-200 truncate max-w-[180px]">{String(v)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {retrainStatus.status === 'idle' && !retrainStatus.result && (
+                                <p className="text-sm text-neutral-600">No retrain triggered yet.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Retrain History */}
+                <div className="rounded-2xl bg-neutral-950 border border-white/[0.06] overflow-hidden">
+                    <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-2">
+                        <History className="w-4 h-4 text-blue-400" />
+                        <h2 className="text-sm font-bold text-neutral-300 uppercase tracking-widest">Retrain History</h2>
+                    </div>
+                    {retrainHistory.length === 0 ? (
+                        <div className="p-12 text-center text-neutral-600 text-sm">No retrain runs recorded yet.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-left text-xs font-bold text-neutral-600 uppercase tracking-widest border-b border-white/[0.04]">
+                                        <th className="px-6 py-3">Time</th>
+                                        <th className="px-6 py-3">Status</th>
+                                        <th className="px-6 py-3">Samples</th>
+                                        <th className="px-6 py-3">F1 Change</th>
+                                        <th className="px-6 py-3">Swapped</th>
+                                        <th className="px-6 py-3">Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {retrainHistory.map(r => {
+                                        const delta = r.old_f1 != null && r.new_f1 != null ? r.new_f1 - r.old_f1 : null;
+                                        return (
+                                            <tr key={r.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                                                <td className="px-6 py-3 text-neutral-500 text-xs font-mono whitespace-nowrap">
+                                                    {new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{' '}
+                                                    {new Date(r.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                                        r.status === 'done' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                        : r.status === 'skipped' ? 'bg-neutral-800 text-neutral-500 border-neutral-700'
+                                                        : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                    }`}>{r.status}</span>
+                                                </td>
+                                                <td className="px-6 py-3 text-neutral-400 font-mono text-xs">{r.new_samples ?? '—'}</td>
+                                                <td className="px-6 py-3 text-xs font-mono">
+                                                    {r.old_f1 != null && r.new_f1 != null ? (
+                                                        <span>
+                                                            <span className="text-neutral-500">{r.old_f1.toFixed(4)}</span>
+                                                            <span className="text-neutral-600 mx-1">→</span>
+                                                            <span className="text-neutral-300">{r.new_f1.toFixed(4)}</span>
+                                                            {delta != null && (
+                                                                <span className={`ml-1 ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-red-400' : 'text-neutral-600'}`}>
+                                                                    {delta > 0 ? '▲' : delta < 0 ? '▼' : '='}{Math.abs(delta).toFixed(4)}
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    {r.swapped ? (
+                                                        <span className="text-xs font-bold text-emerald-400">✓ YES</span>
+                                                    ) : (
+                                                        <span className="text-xs text-neutral-600">No</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-3 text-neutral-500 text-xs max-w-[220px] truncate" title={r.reason}>
+                                                    {r.reason || '—'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
 
                 {/* Scan Analytics Chart */}
