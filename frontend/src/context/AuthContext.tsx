@@ -26,8 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        // Timeout guard: if Supabase doesn't respond in 3s (missing env vars,
+        // placeholder URL, or network issue) treat as logged out and unblock UI.
+        const loadingTimeout = setTimeout(() => setIsLoading(false), 3000);
+
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
+            clearTimeout(loadingTimeout);
             if (session) {
                 const t = session.access_token;
                 setToken(t);
@@ -40,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             setIsLoading(false);
         }).catch(() => {
+            clearTimeout(loadingTimeout);
             // Supabase unreachable (no env vars set) — treat as logged out
             setIsLoading(false);
         });
