@@ -1518,7 +1518,7 @@ def analyze(current_user):
     if detected_language == 'python':
         _init_snn_once()  # lazy-load torch/snntorch on first Python scan
     snn_result = None
-    if SNN_ENABLED and _snn_profiler is not None and detected_language == 'python':
+    if SNN_ENABLED and _snn_profiler is not None and detected_language == 'python' and _py_tree is not None:
         try:
             snn_result = _snn_profiler.profile(codeInput)
         except Exception as _e:
