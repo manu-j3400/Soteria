@@ -9,7 +9,7 @@
 
 The detection core is branded **Kyber**. Around it sits a suite of research-grade security engines (honeypot orchestration, APT hunting, SOC response, container-escape and memory-exploit detection) under `engines/`.
 
-🔗 **Live demo:** [trysoteria.live](https://trysoteria.live) · **API:** [a-c-i-d-1.onrender.com](https://a-c-i-d-1.onrender.com)
+🔗 **Live Site:** [trysoteria.live](https://trysoteria.live) · **API:** [a-c-i-d-1.onrender.com](https://a-c-i-d-1.onrender.com)
 
 ---
 
