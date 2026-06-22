@@ -89,3 +89,4 @@ backend/CSV_master/.cve_scraper_state.json
 # Temporary test screenshots
 result_*.png
 scanner_*.png
+.gstack/
