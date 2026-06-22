@@ -22,7 +22,7 @@ import email_builder
 import re
 from auto_improver import _load_queue as _load_task_queue
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # repo root (this file lives in scripts/)
 GTM_DB_PATH = ROOT / "middleware" / "gtm.db"
 
 

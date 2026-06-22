@@ -37,6 +37,12 @@ SOURCEPATH = str(ROOT / 'backend' / 'src')
 if SOURCEPATH not in sys.path:
     sys.path.append(SOURCEPATH)
 
+# Automation suite (auto_improver, automation_agent, email_builder, ml_feedback,
+# gtm_engine, lead_generator) lives in scripts/ as the single source of truth.
+SCRIPTSPATH = str(ROOT / 'scripts')
+if SCRIPTSPATH not in sys.path:
+    sys.path.append(SCRIPTSPATH)
+
 
 
 # --- INITIALIZATION ---

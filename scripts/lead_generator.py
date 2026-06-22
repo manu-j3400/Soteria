@@ -20,7 +20,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import email_builder
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # repo root (this file lives in scripts/)
 SCAN_DB_PATH = ROOT / "middleware" / "scan_history.db"
 LEADS_DB_PATH = ROOT / "middleware" / "leads.db"
 

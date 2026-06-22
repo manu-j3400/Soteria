@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import email_builder
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # repo root (this file lives in scripts/)
 SCAN_DB_PATH = ROOT / "middleware" / "scan_history.db"
 MODEL_PATH = ROOT / "backend" / "ML_master" / "acidModel.pkl"
 MODEL_BACKUP_DIR = ROOT / "backend" / "ML_master" / "backups"

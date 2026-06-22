@@ -22,7 +22,7 @@ import sqlite3
 from auto_improver import add_task, get_pending_tasks, queue_summary, _load_queue
 import email_builder
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # repo root (this file lives in scripts/)
 ROADMAP_PATH = ROOT / "ROADMAP.md"
 
 

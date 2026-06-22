@@ -43,7 +43,7 @@ jobs:
           python-version: "3.11"
 
       - name: Syntax check
-        run: python -m py_compile middleware/app.py && python -m py_compile automation_agent.py && python -m py_compile auto_improver.py
+        run: python -m py_compile middleware/app.py scripts/automation_agent.py scripts/auto_improver.py
 
       - name: Type check
         run: |
