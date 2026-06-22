@@ -1,5 +1,11 @@
 # Soteria
 
+[![CI](https://github.com/manu-j3400/Soteria/actions/workflows/ci.yml/badge.svg)](https://github.com/manu-j3400/Soteria/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-154%20passing-brightgreen)](https://github.com/manu-j3400/Soteria/tree/main/tests)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org)
+[![Live Demo](https://img.shields.io/badge/demo-trysoteria.live-8b5cf6)](https://trysoteria.live)
+
 **Soteria** is a machine-learning security platform that detects malicious code, backdoors, and injected vulnerabilities by analyzing the *structural and behavioral DNA* of source code. Instead of relying on easily bypassable keyword searches, Soteria layers four independent detection engines — pattern matching, statistical entropy, a Random Forest ensemble over Abstract Syntax Trees, and a Graph Convolutional Network over control-flow graphs — into a single verdict.
 
 The detection core is branded **Kyber**. Around it sits a suite of research-grade security engines (honeypot orchestration, APT hunting, SOC response, container-escape and memory-exploit detection) under `engines/`.
