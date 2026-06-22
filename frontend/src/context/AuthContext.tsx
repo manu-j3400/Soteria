@@ -69,7 +69,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
         });
 
-        return () => subscription.unsubscribe();
+        // If Supabase is unreachable (paused project, bad env vars), kill the
+        // subscription after 5 seconds to stop the token-refresh retry spam.
+        const subKillTimer = setTimeout(() => {
+            subscription.unsubscribe();
+        }, 5000);
+
+        return () => {
+            clearTimeout(subKillTimer);
+            subscription.unsubscribe();
+        };
     }, []);
 
     const login = async (email: string, password: string) => {
