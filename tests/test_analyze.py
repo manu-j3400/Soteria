@@ -2,6 +2,14 @@
 Tests for the code scanning endpoint:
   POST /analyze
 """
+import importlib.util
+
+import pytest
+
+# The SNN temporal profiler is torch-gated. CI installs a lean dependency set
+# (backend/requirements.txt) without torch, so the SNN integration path can't
+# be exercised there. Skip the SNN test when torch is unavailable.
+_TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
 
 BENIGN_CODE = """
@@ -120,6 +128,7 @@ class TestGCNPath:
 
 
 class TestSNNPath:
+    @pytest.mark.skipif(not _TORCH_AVAILABLE, reason="SNN profiler requires torch (not in CI's lean deps)")
     def test_snn_temporal_in_metadata_when_enabled(self, client):
         """When SNN enabled+mocked, snn_temporal key appears in metadata."""
         from unittest.mock import MagicMock, patch

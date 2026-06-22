@@ -29,7 +29,7 @@ jobs:
 
       - name: Run tests
         env:
-          MAKE_WEBHOOK_SECRET: ci-test-secret
+          MAKE_WEBHOOK_SECRET: test_secret_for_ci
         run: python -m pytest tests/ backend/tests/ -v --tb=short
 
   lint:
