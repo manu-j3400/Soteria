@@ -24,9 +24,10 @@ import json as json_stdlib
 import requests
 import html as _html
 from functools import wraps, lru_cache
+from typing import Optional, Any
 
-BUZZ_WORDS = {}       # Placeholder - will be loaded from vulnerability_db
-LANGUAGE_FILTER = {}  # Placeholder - pattern → frozenset of applicable languages
+BUZZ_WORDS: dict = {}       # Placeholder - will be loaded from vulnerability_db
+LANGUAGE_FILTER: dict = {}  # Placeholder - pattern → frozenset of applicable languages
 
 # to make normalizer_AST file accessable 
 ROOT = Path(__file__).resolve().parent.parent
@@ -78,7 +79,7 @@ except ImportError as e:
 
 # Vulnerability database
 try:
-    from vulnerability_db import VULNERABILITY_PATTERNS, LANGUAGE_FILTER
+    from vulnerability_db import VULNERABILITY_PATTERNS, LANGUAGE_FILTER  # type: ignore[no-redef]
     BUZZ_WORDS = {pattern: info[0] for pattern, info in VULNERABILITY_PATTERNS.items()}
     # Also create a severity lookup
     SEVERITY_LOOKUP = {pattern: info[1] for pattern, info in VULNERABILITY_PATTERNS.items()}
@@ -432,12 +433,12 @@ def add_security_headers(response):
 
     return response
 # --- RATE LIMITER ---
-RATE_LIMITS = {}
+RATE_LIMITS: dict = {}
 RATE_LIMIT_LOCK = threading.Lock()
 
 
 # --- AUTOMATION WEBHOOK STATE ---
-AUTOMATION_RUNS = {}
+AUTOMATION_RUNS: dict = {}
 AUTOMATION_LOCK = threading.Lock()
 AUTOMATION_TTL_SECONDS = 60 * 60 * 24  # 24h idempotency window
 
@@ -658,7 +659,7 @@ def init_scan_db():
 
 def _save_training_sample(code: str, language: str, is_malicious: bool,
                           risk_level: str, vuln_count: int, confidence: float,
-                          source: str = 'scanner', user_id: int = None):
+                          source: str = 'scanner', user_id: Optional[int] = None):
     """
     Persist a completed scan as a training sample.
     Uses INSERT OR IGNORE so identical code hashes are not duplicated.
@@ -4017,8 +4018,8 @@ def engines_status(current_user=None):
     """
     import importlib, os
 
-    def _check_engine(module_path: str, checkpoint: str = None) -> dict:
-        status = {"loaded": False, "checkpoint": None, "error": None}
+    def _check_engine(module_path: str, checkpoint: Optional[str] = None) -> dict:
+        status: dict[str, Any] = {"loaded": False, "checkpoint": None, "error": None}
         try:
             importlib.import_module(module_path)
             status["loaded"] = True
