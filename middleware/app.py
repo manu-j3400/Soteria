@@ -1756,12 +1756,50 @@ def analyze(current_user):
         except Exception as _sg_e:
             print(f"Semgrep scan error: {_sg_e}")
 
+    # Full RF feature row (used by source→sink correlation below and scan save)
+    _feat_row = featuresDf.iloc[0].to_dict() if not featuresDf.empty else {}
+
     if vulnerabilities:
         result['vulnerabilities'] = vulnerabilities
+
+        _sev_rank = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+
+        # SOURCE→SINK CORRELATION
+        # A user-input SOURCE plus an unescaped injection SINK in the same file
+        # is a real, exploitable chain — not a heuristic guess. Escalate the sink
+        # findings to HIGH so the verdict reflects a genuine threat. Pattern-only
+        # matches (sink with no tainted source, or a sanitized source with no
+        # sink) stay MEDIUM, keeping false positives low on already-safe code.
+        _SINK_CWES = {
+            'CWE-79',  # XSS
+            'CWE-89',  # SQL injection
+            'CWE-78',  # OS command injection
+            'CWE-77',  # command injection
+            'CWE-94',  # code injection
+            'CWE-95',  # eval injection
+            'CWE-22',  # path traversal
+            'CWE-90',  # LDAP injection
+            'CWE-91',  # XML injection
+        }
+        _SOURCE_CWES = {'CWE-20'}  # improper input validation = user-input read
+        _has_source = (
+            any(v.get('cwe') in _SOURCE_CWES for v in vulnerabilities)
+            or float(_feat_row.get('n_user_input_sources', 0) or 0) > 0
+            or float(_feat_row.get('taint_reaches_sql', 0) or 0) > 0
+            or float(_feat_row.get('taint_reaches_shell', 0) or 0) > 0
+        )
+        if _has_source:
+            for v in vulnerabilities:
+                if v.get('cwe') in _SINK_CWES and _sev_rank.get(v.get('severity', 'LOW'), 1) < 3:
+                    v['severity'] = 'HIGH'
+                    v['description'] = (
+                        v.get('description', '').rstrip('. ') +
+                        ' — user input reaches this sink (source→sink chain), making it exploitable.'
+                    )
+
         result['summary'] = generate_tldr_summary(vulnerabilities)
 
         # Elevate verdict/risk if scanner found HIGH or CRITICAL issues the ML missed
-        _sev_rank = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
         _max_sev = max((_sev_rank.get(v.get('severity', 'LOW'), 1) for v in vulnerabilities), default=1)
         _cur_rank = _sev_rank.get(result.get('risk_level', 'LOW'), 1)
         if _max_sev > _cur_rank:
@@ -1777,7 +1815,6 @@ def analyze(current_user):
     # Auto-save to scan history if logged in
     user_id = current_user['user_id'] if current_user else None
 
-    _feat_row = featuresDf.iloc[0].to_dict() if not featuresDf.empty else {}
     _features = {
         **_feat_row,  # full RF vector: all ~101 AST + engineered feature columns
         'gcn_prob':      result.get('metadata', {}).get('gcn_probability'),
