@@ -919,14 +919,24 @@ export default function Scanner() {
   const lineCount = code.split('\n').length;
   const charCount = code.length;
 
+  // 3-state verdict: "CLEAN" only when there are no real findings. Code flagged
+  // MEDIUM (e.g. an XSS or input-validation issue) is "AT RISK", not clean —
+  // labeling vulnerable code "CLEAN" is misleading. HIGH/CRITICAL or an explicit
+  // malicious verdict is a "THREAT".
+  const _rl = (result.riskLevel || '').toUpperCase();
+  const verdictTier: 'threat' | 'risk' | 'clean' =
+    result.status === 'malicious' || _rl === 'HIGH' || _rl === 'CRITICAL' ? 'threat'
+    : _rl === 'MEDIUM' ? 'risk'
+    : 'clean';
+  const verdictWord  = verdictTier === 'threat' ? 'THREAT DETECTED' : verdictTier === 'risk' ? 'AT RISK' : 'CLEAN';
+  const verdictColor = verdictTier === 'threat' ? C.red : verdictTier === 'risk' ? C.amber : C.acid;
+
   // Status bar label
   const statusLabel = result.status === 'loading' ? '[ SCANNING ]'
-    : result.status === 'malicious' ? '[ THREAT DETECTED ]'
-    : result.status === 'clean' ? '[ CLEAN ]'
+    : hasResults ? `[ ${verdictWord} ]`
     : result.status === 'error' ? '[ ERROR ]'
     : '[ READY ]';
-  const statusColor = result.status === 'malicious' ? C.red
-    : result.status === 'clean' ? C.acid
+  const statusColor = hasResults ? verdictColor
     : result.status === 'loading' ? C.amber
     : result.status === 'error' ? C.red
     : C.subdued;
@@ -1351,12 +1361,12 @@ export default function Scanner() {
                 >
                   {/* Verdict headline */}
                   <div style={{
-                    borderLeft: `3px solid ${result.status === 'malicious' ? C.red : C.acid}`,
+                    borderLeft: `3px solid ${verdictColor}`,
                     paddingLeft: 14, marginBottom: 20,
                   }}>
                     <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.12em', marginBottom: 4 }}>VERDICT</div>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: result.status === 'malicious' ? C.red : C.acid, letterSpacing: '0.04em' }}>
-                      {result.status === 'malicious' ? 'THREAT DETECTED' : 'CLEAN'}
+                    <div style={{ fontSize: 22, fontWeight: 700, color: verdictColor, letterSpacing: '0.04em' }}>
+                      {verdictWord}
                     </div>
                     <div style={{ fontSize: 10, color: C.subdued, marginTop: 4 }}>
                       {result.riskLevel} RISK · {(result.language || (editorLang !== 'plaintext' ? editorLang : '')).toUpperCase()}
@@ -1377,7 +1387,7 @@ export default function Scanner() {
                           transition={{ duration: 0.8, ease: 'easeOut' }}
                           style={{
                             height: '100%', position: 'absolute', left: 0, top: 0,
-                            background: result.confidence > 80 ? (result.status === 'malicious' ? C.red : C.acid) : C.amber,
+                            background: result.confidence > 80 ? verdictColor : C.amber,
                           }}
                         />
                       </div>
