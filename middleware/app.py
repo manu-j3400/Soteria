@@ -590,6 +590,7 @@ _SCAN_DB_MIGRATIONS = [
     (2, 'ALTER TABLE training_data ADD COLUMN user_id INTEGER DEFAULT NULL'),
     (3, 'ALTER TABLE scans ADD COLUMN features TEXT'),
     (4, 'ALTER TABLE scans ADD COLUMN user_label INTEGER'),
+    (5, "ALTER TABLE scans ADD COLUMN label_source TEXT"),
 ]
 
 
@@ -1082,7 +1083,8 @@ def admin_users(current_user):
 
 
 def save_scan_result(user_id=None, language=None, risk_level=None, confidence=None,
-                     malicious=None, code="", nodes_scanned=0, reason="", features=None):
+                     malicious=None, code="", nodes_scanned=0, reason="", features=None,
+                     user_label=None, label_source=None):
     """Save a scan result to the history database (thread-safe). Returns scan row id."""
     import json as _json
     try:
@@ -1093,9 +1095,11 @@ def save_scan_result(user_id=None, language=None, risk_level=None, confidence=No
             c = conn.cursor()
             c.execute(
                 'INSERT INTO scans (user_id, timestamp, language, risk_level, confidence, '
-                'malicious, code_hash, nodes_scanned, reason, features) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'malicious, code_hash, nodes_scanned, reason, features, user_label, label_source) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (user_id, datetime.now().isoformat(), language, risk_level, confidence,
-                 1 if malicious else 0, code_hash, nodes_scanned, reason, features_blob)
+                 1 if malicious else 0, code_hash, nodes_scanned, reason, features_blob,
+                 user_label, label_source)
             )
             conn.commit()
             scan_id = c.lastrowid
@@ -1104,6 +1108,42 @@ def save_scan_result(user_id=None, language=None, risk_level=None, confidence=No
     except Exception as e:
         print(f"Failed to save scan result: {e}")
         return None
+
+
+def auto_verify_verdict(final_malicious, vulnerabilities, entropy_flags,
+                        snn_anomalous, critical_keyword, code_line_count):
+    """
+    Autonomous, background verdict verification (weak supervision).
+
+    The app verifies its OWN verdict instead of asking the user. The deterministic
+    rule engines (pattern scanner, source→sink correlation, entropy, SNN) act as an
+    INDEPENDENT oracle — never the ML grading itself — so the label the retraining
+    pipeline consumes stays non-circular.
+
+    Returns (user_label, label_source):
+      - user_label = 1  → ML verdict agrees with the rule oracle (verified correct)
+      - user_label = 0  → ML verdict disagrees (retraining should flip it)
+      - (None, None)    → rules too ambiguous to judge; scan left unlabeled
+    """
+    _rank = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+    max_sev = max((_rank.get(v.get('severity', 'LOW'), 1) for v in vulnerabilities), default=0)
+    has_chain = any('source→sink chain' in (v.get('description') or '') for v in vulnerabilities)
+
+    # Confident MALICIOUS: a high-severity finding, a confirmed injection chain,
+    # or a critical keyword is high-precision evidence of a real threat.
+    if max_sev >= 3 or has_chain or critical_keyword:
+        oracle_malicious = True
+    # Confident CLEAN: substantial code with zero corroborating signals from any
+    # rule engine. Short snippets are excluded — a one-liner can still be an exploit.
+    elif (not vulnerabilities and not entropy_flags and not snn_anomalous
+          and code_line_count >= 4):
+        oracle_malicious = False
+    else:
+        return None, None  # ambiguous — don't pollute the training set
+
+    user_label = 1 if bool(final_malicious) == oracle_malicious else 0
+    return user_label, 'auto'
+
 
 def load_model_if_updated():
     global model, lastModelTime
@@ -1821,16 +1861,35 @@ def analyze(current_user):
         'rf_confidence': confidence,
     }
 
+    # Background verdict verification — the app checks its own verdict against the
+    # deterministic rule oracle and auto-labels the scan for retraining. No user ask.
+    _final_malicious = result.get('malicious', verdict)
+    _auto_label, _label_src = auto_verify_verdict(
+        final_malicious=_final_malicious,
+        vulnerabilities=vulnerabilities,
+        entropy_flags=entropy_flags,
+        snn_anomalous=bool(snn_result is not None and snn_result.is_anomalous),
+        critical_keyword=bool(critical_or_high_keyword),
+        code_line_count=code_line_count,
+    )
+    if _auto_label is not None:
+        result['metadata']['auto_verified'] = {
+            'agrees': _auto_label == 1,
+            'source': 'rule-engine consensus',
+        }
+
     scan_id = save_scan_result(
         user_id=user_id,
         language=detected_language,
-        risk_level=riskLabel,
+        risk_level=result.get('risk_level', riskLabel),
         confidence=confidence,
-        malicious=verdict,
+        malicious=_final_malicious,
         code=codeInput,
         nodes_scanned=len(featuresDf.columns),
-        reason=message,
+        reason=result.get('reason', message),
         features=_features,
+        user_label=_auto_label,
+        label_source=_label_src,
     )
     result['scan_id'] = scan_id
 

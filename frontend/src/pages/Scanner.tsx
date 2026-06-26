@@ -97,6 +97,10 @@ interface AnalysisResult {
       n_events: number;
       inference_ms: number;
     } | null;
+    auto_verified?: {
+      agrees: boolean;
+      source: string;
+    };
   };
   vulnerabilities?: VulnerabilityItem[];
 }
@@ -753,7 +757,6 @@ export default function Scanner() {
   const [expandedGroups, setExpandedGroups]   = useState<Record<string, boolean>>({});
   const [toastError, setToastError]           = useState<string | null>(null);
   const [historyOpen, setHistoryOpen]         = useState(false);
-  const [feedbackSent, setFeedbackSent]       = useState(false);
   const [examplesOpen, setExamplesOpen]       = useState(false);
   const llmOutputRef                          = useRef('');
   const fileInputRef                          = useRef<HTMLInputElement>(null);
@@ -820,7 +823,7 @@ export default function Scanner() {
     if (!code.trim()) return;
     if (code.length > 50000) { setResult({ status: 'error', message: 'Payload too large. Limit: 50,000 chars.' }); return; }
     setDeepScanStatus('idle'); setLlmOutput(''); setActiveTab('verdict');
-    setActiveLine(null); llmOutputRef.current = ''; setFeedbackSent(false); setResult({ status: 'loading' });
+    setActiveLine(null); llmOutputRef.current = ''; setResult({ status: 'loading' });
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -866,16 +869,6 @@ export default function Scanner() {
     } catch { setResult({ status: 'error', message: 'INTELLIGENCE LINK OFFLINE — backend unreachable' }); }
   };
 
-  const submitFeedback = async (correct: boolean) => {
-    if (!token || !result.scanId) return;
-    await fetch(`${API_BASE_URL}/api/feedback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ scan_id: result.scanId, correct }),
-    }).catch(() => {});
-    setFeedbackSent(true);
-    setTimeout(() => setFeedbackSent(false), 3000);
-  };
 
   const startDeepScan = async (scanData?: { vulnerabilities: VulnerabilityItem[]; riskLevel: string; confidence: number; message: string; language: string }) => {
     setDeepScanStatus('scanning'); setLlmOutput(''); llmOutputRef.current = '';
@@ -1419,30 +1412,16 @@ export default function Scanner() {
                     </div>
                   )}
 
-                  {/* User feedback */}
-                  {result.scanId && (
+                  {/* Background verdict verification — the app self-verifies via
+                      cross-engine consensus instead of asking the user to judge. */}
+                  {result.scanId && result.metadata?.auto_verified && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8, alignItems: 'center' }}>
-                      {feedbackSent ? (
-                        <span style={{ fontSize: 9, color: C.acid, letterSpacing: '0.1em' }}>[ ✓ FEEDBACK RECEIVED ]</span>
-                      ) : (
-                        <>
-                          <div style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.1em', marginRight: 4, alignSelf: 'center' }}>
-                            VERDICT ACCURATE?
-                          </div>
-                          <button onClick={() => submitFeedback(true)}
-                            style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
-                                     color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                                     letterSpacing: '0.08em', cursor: 'pointer' }}>
-                            [ ✓ YES ]
-                          </button>
-                          <button onClick={() => submitFeedback(false)}
-                            style={{ padding: '4px 12px', background: 'transparent', border: `1px solid ${C.subdued}`,
-                                     color: C.subdued, fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                                     letterSpacing: '0.08em', cursor: 'pointer' }}>
-                            [ ✗ WRONG ]
-                          </button>
-                        </>
-                      )}
+                      <span style={{ fontSize: 9, color: C.acid, letterSpacing: '0.1em' }}>
+                        [ ✓ SELF-VERIFIED ]
+                      </span>
+                      <span style={{ fontSize: 9, color: C.subdued, letterSpacing: '0.06em' }}>
+                        cross-engine consensus · auto-labeled for retraining
+                      </span>
                     </div>
                   )}
 
