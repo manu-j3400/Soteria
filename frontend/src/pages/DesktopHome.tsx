@@ -107,8 +107,8 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 function StatusCell({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
     <div className="flex items-center gap-3 px-5 h-full" style={{ borderRight: `1px solid ${C.dim}` }}>
-      <span className="text-[9px] tracking-[0.18em]" style={{ color: C.muted }}>{label}</span>
-      <span className="text-[11px] font-bold tracking-[0.1em]" style={{ color: accent ?? C.text, ...MONO }}>{value}</span>
+      <span className="text-[11px] tracking-[0.18em]" style={{ color: C.muted }}>{label}</span>
+      <span className="text-[13px] font-bold tracking-[0.1em]" style={{ color: accent ?? C.text, ...MONO }}>{value}</span>
     </div>
   );
 }
@@ -127,8 +127,8 @@ function PanelHeader({ children }: { children: React.ReactNode }) {
 function MetricRow({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
     <div className="flex items-center justify-between px-5 py-2" style={{ borderBottom: `1px solid ${C.faint}` }}>
-      <span className="text-[10px] tracking-[0.12em]" style={{ color: C.muted }}>{label}</span>
-      <span className="text-[13px] font-bold tabular-nums" style={{ color: color ?? C.text, ...MONO }}>{value}</span>
+      <span className="text-[12px] tracking-[0.12em]" style={{ color: C.muted }}>{label}</span>
+      <span className="text-[15px] font-bold tabular-nums" style={{ color: color ?? C.text, ...MONO }}>{value}</span>
     </div>
   );
 }
@@ -165,27 +165,27 @@ function ScanRow({
       {/* Selection indicator */}
       <span className="w-2 h-2 flex-shrink-0 flex items-center justify-center" style={{ ...MONO }}>
         {selected
-          ? <span className="text-[10px] font-bold" style={{ color: C.acid }}>✓</span>
+          ? <span className="text-[12px] font-bold" style={{ color: C.acid }}>✓</span>
           : <span style={{ color: C.faint }}>·</span>}
       </span>
 
       {/* ID */}
-      <span className="text-[9px] tabular-nums w-10 flex-shrink-0" style={{ color: C.muted, ...MONO }}>
+      <span className="text-[11px] tabular-nums w-10 flex-shrink-0" style={{ color: C.muted, ...MONO }}>
         #{scan.id}
       </span>
 
       {/* Age */}
-      <span className="text-[9px] w-8 flex-shrink-0 tabular-nums" style={{ color: C.muted, ...MONO }}>
+      <span className="text-[11px] w-8 flex-shrink-0 tabular-nums" style={{ color: C.muted, ...MONO }}>
         {age}
       </span>
 
       {/* Risk badge */}
-      <span className="text-[9px] font-bold tracking-widest w-11 flex-shrink-0" style={{ color: rc, ...MONO }}>
+      <span className="text-[11px] font-bold tracking-widest w-11 flex-shrink-0" style={{ color: rc, ...MONO }}>
         [{riskLabel(scan.risk_level)}]
       </span>
 
       {/* Language */}
-      <span className="text-[9px] w-14 flex-shrink-0 truncate" style={{ color: C.sub, ...MONO }}>
+      <span className="text-[11px] w-14 flex-shrink-0 truncate" style={{ color: C.sub, ...MONO }}>
         {scan.language}
       </span>
 
@@ -194,7 +194,7 @@ function ScanRow({
         <div className="flex-1 h-px relative" style={{ background: C.faint }}>
           <div className="absolute top-0 left-0 h-full" style={{ width: `${scan.confidence}%`, background: rc, opacity: 0.7 }} />
         </div>
-        <span className="text-[9px] tabular-nums flex-shrink-0" style={{ color: C.muted, ...MONO }}>
+        <span className="text-[11px] tabular-nums flex-shrink-0" style={{ color: C.muted, ...MONO }}>
           {scan.confidence}%
         </span>
       </div>
@@ -338,13 +338,13 @@ export default function DesktopHome() {
       <div className="flex-1 flex flex-col overflow-hidden" style={{ marginLeft: '12rem' }}>
 
         {/* ══ STATUS STRIP ══════════════════════════════════════════════════ */}
-        <header className="flex items-center h-9 flex-shrink-0 sticky top-0 z-40"
+        <header className="flex items-center h-11 flex-shrink-0 sticky top-0 z-40"
           style={{ background: '#030712', borderBottom: `1px solid ${C.dim}` }}>
 
           <div className="flex items-center gap-2 px-5 h-full" style={{ borderRight: `1px solid ${C.dim}` }}>
             <span className="w-1.5 h-1.5 animate-pulse flex-shrink-0"
               style={{ background: loading ? C.amber : C.acid, borderRadius: 0 }} />
-            <span className="text-[9px] font-bold tracking-[0.2em]"
+            <span className="text-[11px] font-bold tracking-[0.2em]"
               style={{ color: loading ? C.amber : C.acid }}>
               {loading ? 'LOADING' : 'LIVE'}
             </span>
@@ -357,7 +357,7 @@ export default function DesktopHome() {
           <StatusCell label="XP" value={`${xp.toLocaleString()} · ${level}`} accent={C.gold} />
 
           <div className="flex items-center gap-2 px-5 ml-auto h-full" style={{ borderLeft: `1px solid ${C.dim}` }}>
-            <span className="text-[9px] tracking-[0.12em]" style={{ color: C.muted }}>
+            <span className="text-[11px] tracking-[0.12em]" style={{ color: C.muted }}>
               {user?.name ?? user?.email ?? 'OPERATOR'}
             </span>
           </div>
@@ -372,9 +372,9 @@ export default function DesktopHome() {
 
             {/* Score */}
             <PanelHeader>
-              <span className="text-[10px] font-bold tracking-[0.18em]" style={{ color: C.muted }}>SECURITY POSTURE</span>
+              <span className="text-[12px] font-bold tracking-[0.18em]" style={{ color: C.muted }}>SECURITY POSTURE</span>
               {!loading && (
-                <span className="text-[10px] font-bold tracking-[0.06em]" style={{ color: C.sub }}>
+                <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: C.sub }}>
                   {score}/100
                 </span>
               )}
@@ -398,12 +398,12 @@ export default function DesktopHome() {
               )}
               <div className="flex flex-col gap-1.5">
                 <div>
-                  <div className="text-[9px] tracking-[0.14em]" style={{ color: C.muted }}>7-DAY TREND</div>
+                  <div className="text-[11px] tracking-[0.14em]" style={{ color: C.muted }}>7-DAY TREND</div>
                   <div className="mt-1">
                     <Sparkline data={trendData} color={gradeColor} />
                   </div>
                 </div>
-                <div className="text-[9px]" style={{ color: C.sub }}>
+                <div className="text-[11px]" style={{ color: C.sub }}>
                   {streak}d streak · {level}
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default function DesktopHome() {
             {/* Scan stats */}
             <div style={{ borderBottom: `1px solid ${C.dim}` }}>
               <div className="px-5 pt-3 pb-1">
-                <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>SCAN STATS</span>
+                <span className="text-[11px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>SCAN STATS</span>
               </div>
               <MetricRow label="TOTAL SCANS" value={loading ? '...' : total.toLocaleString()} />
               <MetricRow label="THREATS FOUND" value={loading ? '...' : threats} color={threats > 0 ? C.red : undefined} />
@@ -423,7 +423,7 @@ export default function DesktopHome() {
             {/* Risk distribution */}
             <div style={{ borderBottom: `1px solid ${C.dim}` }}>
               <div className="px-5 pt-3 pb-1">
-                <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>RISK DISTRIBUTION</span>
+                <span className="text-[11px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>RISK DISTRIBUTION</span>
               </div>
               {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(r => {
                 const count = data?.risk_distribution?.[r] ?? 0;
@@ -431,10 +431,10 @@ export default function DesktopHome() {
                 return (
                   <div key={r} className="flex items-center gap-3 px-5 py-1.5"
                     style={{ borderBottom: `1px solid ${C.faint}` }}>
-                    <span className="text-[9px] font-bold tracking-widest w-14 flex-shrink-0"
+                    <span className="text-[11px] font-bold tracking-widest w-14 flex-shrink-0"
                       style={{ color: rc, ...MONO }}>{r === 'CRITICAL' ? 'CRIT' : r}</span>
                     <AsciiBar value={count} max={maxRisk} color={rc} />
-                    <span className="text-[10px] font-bold tabular-nums ml-auto"
+                    <span className="text-[12px] font-bold tabular-nums ml-auto"
                       style={{ color: count > 0 ? rc : C.faint, ...MONO }}>{count}</span>
                   </div>
                 );
@@ -445,17 +445,17 @@ export default function DesktopHome() {
             {!loading && data && Object.keys(data.languages).length > 0 && (
               <div style={{ borderBottom: `1px solid ${C.dim}` }}>
                 <div className="px-5 pt-3 pb-1">
-                  <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>LANGUAGES</span>
+                  <span className="text-[11px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>LANGUAGES</span>
                 </div>
                 {Object.entries(data.languages).slice(0, 6).map(([lang, count]) => {
                   const pct = Math.round((count / total) * 100);
                   return (
                     <div key={lang} className="flex items-center gap-3 px-5 py-1.5"
                       style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] font-bold w-16 truncate flex-shrink-0"
+                      <span className="text-[11px] font-bold w-16 truncate flex-shrink-0"
                         style={{ color: C.sub, ...MONO }}>{lang}</span>
                       <AsciiBar value={count} max={maxLang} color="#4A4A4A" />
-                      <span className="text-[9px] tabular-nums ml-auto"
+                      <span className="text-[11px] tabular-nums ml-auto"
                         style={{ color: C.muted, ...MONO }}>{pct}%</span>
                     </div>
                   );
@@ -467,38 +467,38 @@ export default function DesktopHome() {
             {contrib && (
               <div style={{ borderBottom: `1px solid ${C.dim}` }}>
                 <div className="px-5 pt-3 pb-1 flex items-center justify-between">
-                  <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>MY CONTRIBUTIONS</span>
+                  <span className="text-[11px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>MY CONTRIBUTIONS</span>
                   {contrib.total > 0 && (
-                    <span className="text-[8px]" style={{ color: C.sub, ...MONO }}>{contrib.total} SAMPLES</span>
+                    <span className="text-[10px]" style={{ color: C.sub, ...MONO }}>{contrib.total} SAMPLES</span>
                   )}
                 </div>
                 {contrib.total === 0 ? (
-                  <div className="px-5 py-2 text-[9px]" style={{ color: C.sub, ...MONO }}>
+                  <div className="px-5 py-2 text-[11px]" style={{ color: C.sub, ...MONO }}>
                     Run scans to contribute
                   </div>
                 ) : (
                   <>
                     {/* Label balance mini-bars */}
                     <div className="flex items-center gap-3 px-5 py-1.5" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] font-bold w-14 flex-shrink-0" style={{ color: C.red, ...MONO }}>THREAT</span>
+                      <span className="text-[11px] font-bold w-14 flex-shrink-0" style={{ color: C.red, ...MONO }}>THREAT</span>
                       <AsciiBar value={contrib.malicious} max={contrib.total} color={C.red} />
-                      <span className="text-[9px] tabular-nums ml-auto" style={{ color: C.red, ...MONO }}>{contrib.malicious}</span>
+                      <span className="text-[11px] tabular-nums ml-auto" style={{ color: C.red, ...MONO }}>{contrib.malicious}</span>
                     </div>
                     <div className="flex items-center gap-3 px-5 py-1.5" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] font-bold w-14 flex-shrink-0" style={{ color: C.acid, ...MONO }}>CLEAN</span>
+                      <span className="text-[11px] font-bold w-14 flex-shrink-0" style={{ color: C.acid, ...MONO }}>CLEAN</span>
                       <AsciiBar value={contrib.clean} max={contrib.total} color={C.acid} />
-                      <span className="text-[9px] tabular-nums ml-auto" style={{ color: C.acid, ...MONO }}>{contrib.clean}</span>
+                      <span className="text-[11px] tabular-nums ml-auto" style={{ color: C.acid, ...MONO }}>{contrib.clean}</span>
                     </div>
                     {/* Per-language breakdown */}
                     {contrib.by_language.slice(0, 4).map(({ language, count }) => (
                       <div key={language} className="flex items-center gap-3 px-5 py-1" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                        <span className="text-[8px] font-bold w-14 truncate flex-shrink-0" style={{ color: C.sub, ...MONO }}>{language}</span>
+                        <span className="text-[10px] font-bold w-14 truncate flex-shrink-0" style={{ color: C.sub, ...MONO }}>{language}</span>
                         <AsciiBar value={count} max={contrib.total} color="#3A3A3A" />
-                        <span className="text-[8px] tabular-nums ml-auto" style={{ color: C.sub, ...MONO }}>{count}</span>
+                        <span className="text-[10px] tabular-nums ml-auto" style={{ color: C.sub, ...MONO }}>{count}</span>
                       </div>
                     ))}
                     {contrib.last_collected && (
-                      <div className="px-5 py-1.5 text-[8px]" style={{ color: C.sub, ...MONO }}>
+                      <div className="px-5 py-1.5 text-[10px]" style={{ color: C.sub, ...MONO }}>
                         LAST: {new Date(contrib.last_collected).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                     )}
@@ -511,7 +511,7 @@ export default function DesktopHome() {
             {drift && (
               <div style={{ borderBottom: `1px solid ${C.dim}` }}>
                 <div className="px-5 pt-3 pb-1 flex items-center justify-between">
-                  <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>MODEL DRIFT</span>
+                  <span className="text-[11px] tracking-[0.2em] font-bold" style={{ color: C.faint }}>MODEL DRIFT</span>
                   <span
                     className="w-1.5 h-1.5 flex-shrink-0"
                     style={{
@@ -523,14 +523,14 @@ export default function DesktopHome() {
                   />
                 </div>
                 {drift.status === 'insufficient_data' ? (
-                  <div className="px-5 py-2 text-[9px]" style={{ color: C.sub, ...MONO }}>
+                  <div className="px-5 py-2 text-[11px]" style={{ color: C.sub, ...MONO }}>
                     CALIBRATING — {drift.samples ?? 0}/100 SAMPLES
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between px-5 py-1.5" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] tracking-[0.1em]" style={{ color: C.muted }}>KL DIVERGENCE</span>
-                      <span className="text-[10px] font-bold tabular-nums" style={{
+                      <span className="text-[11px] tracking-[0.1em]" style={{ color: C.muted }}>KL DIVERGENCE</span>
+                      <span className="text-[12px] font-bold tabular-nums" style={{
                         color: (drift.kl_divergence ?? 0) > 0.5 ? C.red : C.acid,
                         ...MONO,
                       }}>
@@ -538,19 +538,19 @@ export default function DesktopHome() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-5 py-1.5" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] tracking-[0.1em]" style={{ color: C.muted }}>BASELINE → RECENT</span>
-                      <span className="text-[9px] tabular-nums" style={{ color: C.sub, ...MONO }}>
+                      <span className="text-[11px] tracking-[0.1em]" style={{ color: C.muted }}>BASELINE → RECENT</span>
+                      <span className="text-[11px] tabular-nums" style={{ color: C.sub, ...MONO }}>
                         {(drift.baseline_mean ?? 0).toFixed(4)} → {(drift.recent_mean ?? 0).toFixed(4)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-5 py-1.5" style={{ borderBottom: `1px solid ${C.faint}` }}>
-                      <span className="text-[9px] tracking-[0.1em]" style={{ color: C.muted }}>SAMPLES</span>
-                      <span className="text-[9px] tabular-nums" style={{ color: C.sub, ...MONO }}>
+                      <span className="text-[11px] tracking-[0.1em]" style={{ color: C.muted }}>SAMPLES</span>
+                      <span className="text-[11px] tabular-nums" style={{ color: C.sub, ...MONO }}>
                         {drift.total_samples} (base: {drift.baseline_samples}, win: {drift.recent_window})
                       </span>
                     </div>
                     {drift.drift_alert && (
-                      <div className="px-5 py-1.5 text-[9px] font-bold tracking-widest" style={{ color: C.red, ...MONO }}>
+                      <div className="px-5 py-1.5 text-[11px] font-bold tracking-widest" style={{ color: C.red, ...MONO }}>
                         ⚠ DRIFT ALERT — KL &gt; 0.5
                       </div>
                     )}
@@ -561,14 +561,14 @@ export default function DesktopHome() {
 
             {/* Quick navigate */}
             <div className="px-4 py-4 flex flex-col gap-2 mt-auto">
-              <div className="text-[9px] tracking-[0.2em] px-1 mb-1" style={{ color: C.faint }}>QUICK NAVIGATE</div>
+              <div className="text-[11px] tracking-[0.2em] px-1 mb-1" style={{ color: C.faint }}>QUICK NAVIGATE</div>
               {[
                 { to: '/scanner', label: 'SCANNER', icon: Activity, color: '#6366f1' },
                 { to: '/batch',   label: 'BATCH',   icon: Layers,   color: '#8b5cf6' },
                 { to: '/engine',  label: 'MODEL LAB',icon: Brain,   color: '#06b6d4' },
               ].map(({ to, label, icon: Icon, color }) => (
                 <button key={to} onClick={() => navigate(to)}
-                  className="flex items-center justify-between px-3 py-2 text-[10px] font-bold tracking-[0.1em] transition-all duration-100 group"
+                  className="flex items-center justify-between px-3 py-2 text-[12px] font-bold tracking-[0.1em] transition-all duration-100 group"
                   style={{ border: `1px solid ${C.faint}`, background: 'transparent', color: C.muted }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLButtonElement).style.borderColor = color;
@@ -594,9 +594,9 @@ export default function DesktopHome() {
             {/* Toolbar */}
             <PanelHeader>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold tracking-[0.18em]" style={{ color: C.muted }}>SCAN HISTORY</span>
+                <span className="text-[12px] font-bold tracking-[0.18em]" style={{ color: C.muted }}>SCAN HISTORY</span>
                 {data?.recent_scans?.length ? (
-                  <span className="text-[9px]" style={{ color: C.faint }}>
+                  <span className="text-[11px]" style={{ color: C.faint }}>
                     {compareIds.length > 0 && `${compareIds.length} SELECTED`}
                   </span>
                 ) : null}
@@ -606,7 +606,7 @@ export default function DesktopHome() {
                 {/* Compare */}
                 {compareIds.length === 2 && (
                   <button onClick={handleCompare} disabled={compareLoading}
-                    className="flex items-center gap-1.5 px-3 py-1 text-[9px] font-bold tracking-widest transition-all duration-100"
+                    className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-widest transition-all duration-100"
                     style={{ border: `1px solid ${C.mid}`, color: '#818cf8', background: 'transparent' }}>
                     <GitCompare className="w-3 h-3" />
                     {compareLoading ? '...' : 'COMPARE'}
@@ -614,14 +614,14 @@ export default function DesktopHome() {
                 )}
                 {compareIds.length > 0 && (
                   <button onClick={() => { setCompareIds([]); setCompareResult(null); }}
-                    className="px-2 py-1 text-[9px] transition-colors duration-100"
+                    className="px-2 py-1 text-[11px] transition-colors duration-100"
                     style={{ border: `1px solid ${C.faint}`, color: C.muted, background: 'transparent' }}>
                     <X className="w-3 h-3" />
                   </button>
                 )}
                 {/* Export */}
                 <button onClick={handleExportCSV}
-                  className="flex items-center gap-1.5 px-3 py-1 text-[9px] font-bold tracking-widest transition-all duration-100"
+                  className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-widest transition-all duration-100"
                   style={{ border: `1px solid ${C.faint}`, color: C.muted, background: 'transparent' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.text; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = C.muted; }}>
@@ -630,7 +630,7 @@ export default function DesktopHome() {
                 </button>
                 {/* Webhook toggle */}
                 <button onClick={() => setShowWebhook(s => !s)}
-                  className="flex items-center gap-1.5 px-3 py-1 text-[9px] font-bold tracking-widest transition-all duration-100"
+                  className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-widest transition-all duration-100"
                   style={{
                     border: `1px solid ${showWebhook ? '#818cf8' : C.faint}`,
                     color: showWebhook ? '#818cf8' : C.muted,
@@ -653,7 +653,7 @@ export default function DesktopHome() {
                   className="overflow-hidden flex-shrink-0"
                   style={{ borderBottom: `1px solid ${C.dim}` }}>
                   <div className="flex items-center gap-3 px-5 py-3">
-                    <span className="text-[9px] tracking-[0.14em] flex-shrink-0" style={{ color: C.muted }}>
+                    <span className="text-[11px] tracking-[0.14em] flex-shrink-0" style={{ color: C.muted }}>
                       WEBHOOK URL
                     </span>
                     <input
@@ -661,7 +661,7 @@ export default function DesktopHome() {
                       value={webhookUrl}
                       onChange={e => setWebhookUrl(e.target.value)}
                       placeholder="https://hooks.slack.com/..."
-                      className="flex-1 bg-transparent text-[10px] outline-none px-3 py-1.5 font-bold"
+                      className="flex-1 bg-transparent text-[12px] outline-none px-3 py-1.5 font-bold"
                       style={{
                         ...MONO,
                         border: `1px solid ${C.dim}`,
@@ -670,7 +670,7 @@ export default function DesktopHome() {
                       }}
                     />
                     <button onClick={handleSaveWebhook}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-bold tracking-widest transition-all duration-100"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold tracking-widest transition-all duration-100"
                       style={{
                         background: webhookSaved ? C.acid : 'transparent',
                         border: `1px solid ${webhookSaved ? C.acid : C.mid}`,
@@ -694,7 +694,7 @@ export default function DesktopHome() {
                   transition={{ duration: 0.15 }}
                   className="overflow-hidden flex-shrink-0"
                   style={{ borderBottom: `1px solid ${C.dim}` }}>
-                  <div className="px-5 py-3 text-[10px]"
+                  <div className="px-5 py-3 text-[12px]"
                     style={{ background: compareError ? '#1A0000' : '#0A0A0A', ...MONO }}>
                     {compareError ? (
                       <span style={{ color: C.red }}>ERR: {compareError}</span>
@@ -716,11 +716,11 @@ export default function DesktopHome() {
             <div className="flex items-center gap-3 px-5 py-2 flex-shrink-0"
               style={{ borderBottom: `1px solid ${C.dim}`, background: '#040A14' }}>
               <span className="w-2 flex-shrink-0" />
-              <span className="text-[8px] tracking-[0.2em] w-10 flex-shrink-0" style={{ color: C.faint }}>ID</span>
-              <span className="text-[8px] tracking-[0.2em] w-8 flex-shrink-0"  style={{ color: C.faint }}>AGE</span>
-              <span className="text-[8px] tracking-[0.2em] w-11 flex-shrink-0" style={{ color: C.faint }}>RISK</span>
-              <span className="text-[8px] tracking-[0.2em] w-14 flex-shrink-0" style={{ color: C.faint }}>LANG</span>
-              <span className="text-[8px] tracking-[0.2em] flex-1"             style={{ color: C.faint }}>CONFIDENCE</span>
+              <span className="text-[10px] tracking-[0.2em] w-10 flex-shrink-0" style={{ color: C.faint }}>ID</span>
+              <span className="text-[10px] tracking-[0.2em] w-8 flex-shrink-0"  style={{ color: C.faint }}>AGE</span>
+              <span className="text-[10px] tracking-[0.2em] w-11 flex-shrink-0" style={{ color: C.faint }}>RISK</span>
+              <span className="text-[10px] tracking-[0.2em] w-14 flex-shrink-0" style={{ color: C.faint }}>LANG</span>
+              <span className="text-[10px] tracking-[0.2em] flex-1"             style={{ color: C.faint }}>CONFIDENCE</span>
             </div>
 
             {/* Scan list */}
@@ -739,19 +739,19 @@ export default function DesktopHome() {
               ) : (
                 /* Empty state — terminal prompt style */
                 <div className="flex flex-col justify-center items-start px-5 py-10">
-                  <div className="text-[11px]" style={{ color: C.muted, ...MONO }}>
+                  <div className="text-[13px]" style={{ color: C.muted, ...MONO }}>
                     <span style={{ color: C.acid }}>soteria@scanner</span>
                     <span style={{ color: C.sub }}>:~$</span>
                     <span className="ml-2 text-[#444]">ls -la ./scan-history</span>
                   </div>
-                  <div className="mt-2 text-[11px]" style={{ color: C.faint, ...MONO }}>
+                  <div className="mt-2 text-[13px]" style={{ color: C.faint, ...MONO }}>
                     total 0
                   </div>
-                  <div className="mt-3 text-[11px]" style={{ color: C.muted, ...MONO }}>
+                  <div className="mt-3 text-[13px]" style={{ color: C.muted, ...MONO }}>
                     No scans found. Run your first scan to begin.
                   </div>
                   <button onClick={() => navigate('/scanner')}
-                    className="mt-5 flex items-center gap-2 px-4 py-2 text-[10px] font-bold tracking-[0.14em] transition-all duration-100"
+                    className="mt-5 flex items-center gap-2 px-4 py-2 text-[12px] font-bold tracking-[0.14em] transition-all duration-100"
                     style={{ background: C.acid, color: '#000', border: 'none', borderRadius: 0 }}>
                     → OPEN SCANNER
                   </button>
@@ -762,13 +762,13 @@ export default function DesktopHome() {
             {/* Bottom info strip */}
             <div className="flex items-center gap-5 px-5 py-2 flex-shrink-0"
               style={{ borderTop: `1px solid ${C.dim}` }}>
-              <span className="text-[9px]" style={{ color: C.faint, ...MONO }}>
+              <span className="text-[11px]" style={{ color: C.faint, ...MONO }}>
                 {data?.recent_scans?.length ?? 0} RECORDS
               </span>
-              <span className="text-[9px]" style={{ color: C.faint, ...MONO }}>
+              <span className="text-[11px]" style={{ color: C.faint, ...MONO }}>
                 SELECT 2 TO COMPARE
               </span>
-              <span className="text-[9px] ml-auto" style={{ color: C.faint, ...MONO }}>
+              <span className="text-[11px] ml-auto" style={{ color: C.faint, ...MONO }}>
                 KYBER ENGINE v3.0
               </span>
             </div>

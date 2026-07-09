@@ -148,7 +148,7 @@ export default function NeuralEngine() {
             {/* ── TOP STATUS STRIP ─────────────────────────────────────────── */}
             <div style={{
                 display: 'flex', alignItems: 'center', height: 36,
-                borderBottom: `1px solid ${C.border}`, fontSize: 10,
+                borderBottom: `1px solid ${C.border}`, fontSize: 12,
                 letterSpacing: '0.08em',
             }}>
                 <EngCell style={{ color: sysColor, fontWeight: 700, minWidth: 200 }}>
@@ -164,7 +164,7 @@ export default function NeuralEngine() {
                 <EngCell style={{ marginLeft: 'auto' }}>
                     <button
                         onClick={fetchModelStats}
-                        style={{ color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, letterSpacing: '0.08em' }}
+                        style={{ color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, letterSpacing: '0.08em' }}
                         onMouseEnter={e => (e.currentTarget.style.color = C.text)}
                         onMouseLeave={e => (e.currentTarget.style.color = C.sub)}
                     >
@@ -180,7 +180,7 @@ export default function NeuralEngine() {
 
                     {/* Engine status list */}
                     <div style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 0' }}>
-                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>DETECTION LAYERS</div>
+                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>DETECTION LAYERS</div>
                         {ENGINE_META.map(({ key, label, short, desc, offline }) => {
                             const active = resolvedEngines[key];
                             return (
@@ -198,16 +198,16 @@ export default function NeuralEngine() {
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: 8, color: active ? C.acid : C.muted, border: `1px solid ${active ? C.acid : C.muted}`, padding: '1px 4px', fontWeight: 700 }}>
+                                            <span style={{ fontSize: 10, color: active ? C.acid : C.muted, border: `1px solid ${active ? C.acid : C.muted}`, padding: '1px 4px', fontWeight: 700 }}>
                                                 {short}
                                             </span>
-                                            <span style={{ fontSize: 9, color: active ? C.text : C.sub, fontWeight: active ? 700 : 400 }}>{label}</span>
+                                            <span style={{ fontSize: 11, color: active ? C.text : C.sub, fontWeight: active ? 700 : 400 }}>{label}</span>
                                         </div>
-                                        <span style={{ fontSize: 8, color: active ? C.acid : C.red, fontWeight: 700 }}>
+                                        <span style={{ fontSize: 10, color: active ? C.acid : C.red, fontWeight: 700 }}>
                                             {active ? '[ LIVE ]' : '[ OFFLINE ]'}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: 8, color: C.sub, lineHeight: 1.6 }}>
+                                    <div style={{ fontSize: 10, color: C.sub, lineHeight: 1.6 }}>
                                         {active ? desc : offline}
                                     </div>
                                 </motion.div>
@@ -218,7 +218,7 @@ export default function NeuralEngine() {
                     {/* Extended engine fleet */}
                     {enginesStatus && (
                         <div style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 0' }}>
-                            <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>ENGINE FLEET</div>
+                            <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>ENGINE FLEET</div>
                             {Object.entries(enginesStatus.engines).map(([key, eng]) => (
                                 <div key={key} style={{
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -227,20 +227,20 @@ export default function NeuralEngine() {
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                         <span style={{
-                                            fontSize: 7, border: `1px solid ${eng.loaded ? C.acid : C.muted}`,
+                                            fontSize: 9, border: `1px solid ${eng.loaded ? C.acid : C.muted}`,
                                             color: eng.loaded ? C.acid : C.muted, padding: '1px 3px', fontWeight: 700,
                                         }}>
                                             {ENGINE_SHORT[key] ?? key.slice(0, 3).toUpperCase()}
                                         </span>
-                                        <span style={{ fontSize: 8, color: eng.loaded ? C.text : C.sub }}>{eng.label}</span>
+                                        <span style={{ fontSize: 10, color: eng.loaded ? C.text : C.sub }}>{eng.label}</span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                         {eng.checkpoint !== undefined && eng.checkpoint !== null && (
-                                            <span style={{ fontSize: 7, color: eng.checkpoint ? C.acid : C.amber }}>
+                                            <span style={{ fontSize: 9, color: eng.checkpoint ? C.acid : C.amber }}>
                                                 {eng.checkpoint ? '✓ PT' : '✗ PT'}
                                             </span>
                                         )}
-                                        <span style={{ fontSize: 7, color: eng.loaded ? C.acid : C.red, fontWeight: 700 }}>
+                                        <span style={{ fontSize: 9, color: eng.loaded ? C.acid : C.red, fontWeight: 700 }}>
                                             {eng.loaded ? 'LIVE' : 'OFF'}
                                         </span>
                                     </div>
@@ -251,13 +251,13 @@ export default function NeuralEngine() {
 
                     {/* Model metadata */}
                     <div style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 0' }}>
-                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>MODEL METADATA</div>
+                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>MODEL METADATA</div>
                         {[
                             { label: 'TYPE',     value: modelStats.model_type },
                             { label: 'TRAINED',  value: modelStats.last_trained },
                             { label: 'SIZE',     value: modelStats.file_size },
                         ].map(({ label, value }) => (
-                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 16px', fontSize: 9 }}>
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 16px', fontSize: 11 }}>
                                 <span style={{ color: C.sub }}>{label}</span>
                                 <span style={{ color: C.text }}>{statsLoading ? '—' : value}</span>
                             </div>
@@ -266,14 +266,14 @@ export default function NeuralEngine() {
 
                     {/* Drift panel */}
                     <div style={{ padding: '12px 0' }}>
-                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>
+                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.14em', padding: '0 16px', marginBottom: 8 }}>
                             DRIFT MONITOR
                             {driftData?.drift_alert && (
                                 <span style={{ marginLeft: 8, color: C.amber }}>[ ALERT ]</span>
                             )}
                         </div>
                         {!driftData ? (
-                            <div style={{ padding: '4px 16px', fontSize: 9, color: C.sub, lineHeight: 1.7 }}>
+                            <div style={{ padding: '4px 16px', fontSize: 11, color: C.sub, lineHeight: 1.7 }}>
                                 Run scans to populate drift tracking.
                                 KL divergence measured against training distribution.
                             </div>
@@ -285,13 +285,13 @@ export default function NeuralEngine() {
                                     { label: 'AVG RISK (RECENT)', value: `${(driftData.recent_mean * 100).toFixed(1)}%` },
                                     { label: 'STATUS', value: driftData.drift_alert ? 'DRIFTING' : 'STABLE', alert: driftData.drift_alert },
                                 ].map(({ label, value, alert }) => (
-                                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 16px', fontSize: 9 }}>
+                                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 16px', fontSize: 11 }}>
                                         <span style={{ color: C.sub }}>{label}</span>
                                         <span style={{ color: alert ? C.amber : C.text, fontWeight: alert ? 700 : 400 }}>{value}</span>
                                     </div>
                                 ))}
                                 {driftData.drift_alert && (
-                                    <div style={{ margin: '8px 16px', padding: '8px 10px', background: 'rgba(255,140,0,0.08)', border: `1px solid rgba(255,140,0,0.25)`, fontSize: 8, color: '#FFBA60', lineHeight: 1.6 }}>
+                                    <div style={{ margin: '8px 16px', padding: '8px 10px', background: 'rgba(255,140,0,0.08)', border: `1px solid rgba(255,140,0,0.25)`, fontSize: 10, color: '#FFBA60', lineHeight: 1.6 }}>
                                         ! Model drift detected. Predictions have shifted from baseline. Retrain recommended.
                                     </div>
                                 )}
@@ -301,8 +301,8 @@ export default function NeuralEngine() {
 
                     {/* Auto-update note */}
                     <div style={{ marginTop: 'auto', borderTop: `1px solid ${C.border}`, padding: 16 }}>
-                        <div style={{ fontSize: 8, color: C.sub, letterSpacing: '0.12em', marginBottom: 8 }}>MODEL UPDATES</div>
-                        <div style={{ fontSize: 8, color: C.sub, lineHeight: 1.8 }}>
+                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.12em', marginBottom: 8 }}>MODEL UPDATES</div>
+                        <div style={{ fontSize: 10, color: C.sub, lineHeight: 1.8 }}>
                             <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>Models improve automatically as more scans are collected</div>
                             <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>Your false-positive reports help calibrate detection</div>
                             <div style={{ display: 'flex', gap: 6 }}><span style={{ color: C.acid }}>›</span>No action required — updates are applied server-side</div>
@@ -317,7 +317,7 @@ export default function NeuralEngine() {
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         height: 36, borderBottom: `1px solid ${C.border}`,
-                        padding: '0 16px', fontSize: 9, color: C.sub, letterSpacing: '0.1em',
+                        padding: '0 16px', fontSize: 11, color: C.sub, letterSpacing: '0.1em',
                     }}>
                         <span>HOW SOTERIA DETECTS THREATS</span>
                     </div>
@@ -357,22 +357,22 @@ export default function NeuralEngine() {
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                     <span style={{
-                                        fontSize: 8, border: `1px solid ${active ? C.acid : C.muted}`,
+                                        fontSize: 10, border: `1px solid ${active ? C.acid : C.muted}`,
                                         color: active ? C.acid : C.muted, padding: '2px 6px', fontWeight: 700,
                                     }}>{short}</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: active ? C.text : C.sub }}>{label}</span>
-                                    <span style={{ marginLeft: 'auto', fontSize: 8, color: active ? C.acid : C.red, fontWeight: 700 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: active ? C.text : C.sub }}>{label}</span>
+                                    <span style={{ marginLeft: 'auto', fontSize: 10, color: active ? C.acid : C.red, fontWeight: 700 }}>
                                         {active ? '● ACTIVE' : '○ OFFLINE'}
                                     </span>
                                 </div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: 9, color: C.sub, lineHeight: 1.7 }}>{how}</p>
-                                <div style={{ fontSize: 8, color: C.muted }}>
+                                <p style={{ margin: '0 0 8px 0', fontSize: 11, color: C.sub, lineHeight: 1.7 }}>{how}</p>
+                                <div style={{ fontSize: 10, color: C.muted }}>
                                     <span style={{ color: C.acid, marginRight: 6 }}>DETECTS</span>{catches}
                                 </div>
                             </div>
                         ))}
 
-                        <div style={{ padding: '12px 16px', background: '#050505', border: `1px solid #1A1A1A`, fontSize: 8, color: C.sub, lineHeight: 1.8 }}>
+                        <div style={{ padding: '12px 16px', background: '#050505', border: `1px solid #1A1A1A`, fontSize: 10, color: C.sub, lineHeight: 1.8 }}>
                             <span style={{ color: C.text, fontWeight: 700, letterSpacing: '0.1em' }}>MULTI-LAYER CONSENSUS</span>
                             <br />
                             All active engines run in parallel on every scan. Results are combined using a weighted
@@ -395,7 +395,7 @@ function EngCell({ children, style }: { children: React.ReactNode; style?: React
         <div style={{
             display: 'flex', alignItems: 'center', height: '100%',
             padding: '0 14px', borderRight: '1px solid #1E1E1E',
-            fontSize: 10, color: '#707070', letterSpacing: '0.08em',
+            fontSize: 12, color: '#707070', letterSpacing: '0.08em',
             gap: 6, whiteSpace: 'nowrap', ...style,
         }}>
             {children}
