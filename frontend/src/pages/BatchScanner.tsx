@@ -160,7 +160,7 @@ export default function BatchScanner() {
             {/* ── TOP STATUS STRIP ─────────────────────────────────────────── */}
             <div style={{
                 display: 'flex', alignItems: 'center', height: 36,
-                borderBottom: `1px solid ${C.border}`, fontSize: 12, letterSpacing: '0.08em',
+                borderBottom: `1px solid ${C.border}`, fontSize: 14, letterSpacing: '0.08em',
             }}>
                 <BCell style={{ minWidth: 200, fontWeight: 700 }}>BATCH SCANNER</BCell>
                 {scanState === 'idle' && files.length > 0 && (
@@ -184,7 +184,7 @@ export default function BatchScanner() {
                     <BCell style={{ marginLeft: 'auto' }}>
                         <button
                             onClick={resetScan}
-                            style={{ color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, letterSpacing: '0.08em' }}
+                            style={{ color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, letterSpacing: '0.08em' }}
                             onMouseEnter={e => (e.currentTarget.style.color = C.text)}
                             onMouseLeave={e => (e.currentTarget.style.color = C.sub)}
                         >
@@ -203,8 +203,8 @@ export default function BatchScanner() {
                         <div style={{ border: `1px solid ${C.border}`, marginBottom: 16, padding: 20 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                                 <div>
-                                    <div style={{ fontSize: 11, color: C.sub, letterSpacing: '0.12em', marginBottom: 4 }}>GITHUB INTEGRATION</div>
-                                    <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>
+                                    <div style={{ fontSize: 13, color: C.sub, letterSpacing: '0.12em', marginBottom: 4 }}>GITHUB INTEGRATION</div>
+                                    <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.6 }}>
                                         Connect to scan private repos directly from your codebases.
                                     </div>
                                 </div>
@@ -214,7 +214,7 @@ export default function BatchScanner() {
                                         style={{
                                             padding: '8px 20px', background: 'transparent',
                                             border: `1px solid ${C.sub}`, color: C.text,
-                                            fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
+                                            fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
                                             letterSpacing: '0.1em', cursor: 'pointer', whiteSpace: 'nowrap',
                                             transition: 'border-color 0.15s, color 0.15s',
                                         }}
@@ -226,7 +226,7 @@ export default function BatchScanner() {
                                 ) : (
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                         {isFetchingRepos ? (
-                                            <span style={{ fontSize: 11, color: C.sub }}>LOADING REPOS...</span>
+                                            <span style={{ fontSize: 13, color: C.sub }}>LOADING REPOS...</span>
                                         ) : (
                                             <select
                                                 value={repoUrl}
@@ -234,7 +234,7 @@ export default function BatchScanner() {
                                                 style={{
                                                     background: C.dim, border: `1px solid ${C.border}`,
                                                     color: C.text, padding: '6px 10px', outline: 'none',
-                                                    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                                                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
                                                     minWidth: 240,
                                                 }}
                                             >
@@ -251,7 +251,7 @@ export default function BatchScanner() {
                                                 padding: '6px 16px', background: repoUrl ? C.acid : C.dim,
                                                 border: `1px solid ${repoUrl ? C.acid : C.muted}`,
                                                 color: repoUrl ? '#000' : C.muted,
-                                                fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                                                fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
                                                 letterSpacing: '0.1em', cursor: repoUrl ? 'pointer' : 'not-allowed',
                                                 fontWeight: 700, transition: 'background 0.15s',
                                             }}
@@ -283,10 +283,10 @@ export default function BatchScanner() {
                                 accept=".py,.js,.ts,.tsx,.jsx,.java,.c,.cpp,.h,.cs,.go,.rb,.php,.rs,.swift,.kt,.sh,.sql,.html,.css,.vue,.svelte"
                             />
                             <div style={{ fontSize: 32, color: dragActive ? C.acid : C.muted, marginBottom: 12 }}>⬇</div>
-                            <div style={{ fontSize: 13, color: dragActive ? C.acid : C.text, letterSpacing: '0.1em', marginBottom: 6, fontWeight: 700 }}>
+                            <div style={{ fontSize: 15, color: dragActive ? C.acid : C.text, letterSpacing: '0.1em', marginBottom: 6, fontWeight: 700 }}>
                                 {dragActive ? 'DROP FILES TO QUEUE' : 'DRAG & DROP CODE FILES'}
                             </div>
-                            <div style={{ fontSize: 11, color: C.sub }}>
+                            <div style={{ fontSize: 13, color: C.sub }}>
                                 .py .js .ts .java .c .cpp .go .rb .php .rs + MORE · MAX 50 FILES · 50KB/FILE
                             </div>
                         </div>
@@ -295,13 +295,13 @@ export default function BatchScanner() {
                         {files.length > 0 && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                    <span style={{ fontSize: 11, color: C.sub, letterSpacing: '0.12em' }}>
+                                    <span style={{ fontSize: 13, color: C.sub, letterSpacing: '0.12em' }}>
                                         {files.length} FILE{files.length !== 1 ? 'S' : ''} QUEUED
                                     </span>
                                     <div style={{ display: 'flex', gap: 8 }}>
                                         <button
                                             onClick={resetScan}
-                                            style={{ fontSize: 11, color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.08em' }}
+                                            style={{ fontSize: 13, color: C.sub, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.08em' }}
                                         >
                                             [ CLEAR ]
                                         </button>
@@ -310,7 +310,7 @@ export default function BatchScanner() {
                                             style={{
                                                 padding: '6px 20px', background: C.acid, border: `1px solid ${C.acid}`,
                                                 color: '#000', fontFamily: "'JetBrains Mono', monospace",
-                                                fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer',
+                                                fontSize: 14, letterSpacing: '0.1em', cursor: 'pointer',
                                                 fontWeight: 700,
                                             }}
                                         >
@@ -326,13 +326,13 @@ export default function BatchScanner() {
                                             borderBottom: i < files.length - 1 ? `1px solid ${C.border}` : 'none',
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <span style={{ fontSize: 11, color: C.sub }}>›</span>
-                                                <span style={{ fontSize: 12, color: C.text }}>{f.filename}</span>
-                                                <span style={{ fontSize: 10, color: C.muted }}>{(f.size / 1024).toFixed(1)} KB</span>
+                                                <span style={{ fontSize: 13, color: C.sub }}>›</span>
+                                                <span style={{ fontSize: 14, color: C.text }}>{f.filename}</span>
+                                                <span style={{ fontSize: 12, color: C.muted }}>{(f.size / 1024).toFixed(1)} KB</span>
                                             </div>
                                             <button
                                                 onClick={() => removeFile(f.filename)}
-                                                style={{ color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
+                                                style={{ color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }}
                                                 onMouseEnter={e => (e.currentTarget.style.color = C.red)}
                                                 onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
                                                 aria-label={`Remove ${f.filename}`}
@@ -353,7 +353,7 @@ export default function BatchScanner() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         style={{ textAlign: 'center', padding: '80px 0' }}
                     >
-                        <div style={{ fontSize: 11, color: C.amber, letterSpacing: '0.12em', lineHeight: 2 }}>
+                        <div style={{ fontSize: 13, color: C.amber, letterSpacing: '0.12em', lineHeight: 2 }}>
                             <div>{'>'} INITIALIZING BATCH PIPELINE...</div>
                             <div>{'>'} {repoUrl && files.length === 0 ? 'CLONING REPOSITORY...' : `PROCESSING ${files.length} FILES...`}</div>
                             <div>{'>'} RUNNING SOTERIA ML ENSEMBLE...</div>
@@ -378,7 +378,7 @@ export default function BatchScanner() {
                         </div>
 
                         {/* Results table */}
-                        <div style={{ fontSize: 11, color: C.sub, letterSpacing: '0.12em', marginBottom: 10 }}>
+                        <div style={{ fontSize: 13, color: C.sub, letterSpacing: '0.12em', marginBottom: 10 }}>
                             PER-FILE RESULTS — {results.length} FILES
                         </div>
                         <div style={{ border: `1px solid ${C.border}` }}>
@@ -386,7 +386,7 @@ export default function BatchScanner() {
                             <div style={{
                                 display: 'grid', gridTemplateColumns: '2fr 80px 90px 80px 90px',
                                 padding: '6px 14px', borderBottom: `1px solid ${C.border}`,
-                                fontSize: 10, color: C.sub, letterSpacing: '0.1em',
+                                fontSize: 12, color: C.sub, letterSpacing: '0.1em',
                             }}>
                                 <span>FILE</span>
                                 <span>LANG</span>
@@ -408,16 +408,16 @@ export default function BatchScanner() {
                                         onMouseEnter={e => { if (expandedRow !== i) e.currentTarget.style.background = '#080808'; }}
                                         onMouseLeave={e => { if (expandedRow !== i) e.currentTarget.style.background = 'transparent'; }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.text, overflow: 'hidden' }}>
-                                            <span style={{ color: C.sub, fontSize: 10 }}>{expandedRow === i ? '▾' : '▸'}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: C.text, overflow: 'hidden' }}>
+                                            <span style={{ color: C.sub, fontSize: 12 }}>{expandedRow === i ? '▾' : '▸'}</span>
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.filename}</span>
                                         </div>
-                                        <span style={{ fontSize: 10, color: C.sub }}>{r.language?.toUpperCase()}</span>
-                                        <span style={{ fontSize: 10, color: riskColor(r.risk_level), fontWeight: 700, border: `1px solid ${riskColor(r.risk_level)}`, padding: '1px 4px', display: 'inline-block', opacity: 0.85 }}>
+                                        <span style={{ fontSize: 12, color: C.sub }}>{r.language?.toUpperCase()}</span>
+                                        <span style={{ fontSize: 12, color: riskColor(r.risk_level), fontWeight: 700, border: `1px solid ${riskColor(r.risk_level)}`, padding: '1px 4px', display: 'inline-block', opacity: 0.85 }}>
                                             {r.risk_level}
                                         </span>
-                                        <span style={{ fontSize: 11, color: C.text }}>{r.confidence}%</span>
-                                        <span style={{ fontSize: 11, color: r.status === 'malicious' ? C.red : r.status === 'clean' ? C.acid : C.sub, fontWeight: 700 }}>
+                                        <span style={{ fontSize: 13, color: C.text }}>{r.confidence}%</span>
+                                        <span style={{ fontSize: 13, color: r.status === 'malicious' ? C.red : r.status === 'clean' ? C.acid : C.sub, fontWeight: 700 }}>
                                             {r.status === 'malicious' ? '[ THREAT ]' : r.status === 'clean' ? '[ CLEAN ]' : '[ ERROR ]'}
                                         </span>
                                     </div>
@@ -431,10 +431,10 @@ export default function BatchScanner() {
                                             >
                                                 <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 220px', gap: 20 }}>
                                                     <div>
-                                                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.1em', marginBottom: 8 }}>ANALYSIS</div>
-                                                        <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.7 }}>{r.message}</div>
+                                                        <div style={{ fontSize: 12, color: C.sub, letterSpacing: '0.1em', marginBottom: 8 }}>ANALYSIS</div>
+                                                        <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.7 }}>{r.message}</div>
                                                         <div style={{
-                                                            marginTop: 10, padding: '8px 12px', fontSize: 10, lineHeight: 1.6,
+                                                            marginTop: 10, padding: '8px 12px', fontSize: 12, lineHeight: 1.6,
                                                             border: `1px solid ${r.status === 'malicious' ? 'rgba(255,49,49,0.3)' : 'rgba(173,255,47,0.2)'}`,
                                                             background: r.status === 'malicious' ? 'rgba(255,49,49,0.05)' : 'rgba(173,255,47,0.03)',
                                                             color: r.status === 'malicious' ? '#FF8080' : '#A0D080',
@@ -445,14 +445,14 @@ export default function BatchScanner() {
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <div style={{ fontSize: 10, color: C.sub, letterSpacing: '0.1em', marginBottom: 8 }}>FILE INFO</div>
+                                                        <div style={{ fontSize: 12, color: C.sub, letterSpacing: '0.1em', marginBottom: 8 }}>FILE INFO</div>
                                                         {[
                                                             { k: 'LANGUAGE', v: r.language },
                                                             { k: 'CONFIDENCE', v: `${r.confidence}%` },
                                                             { k: 'RISK LEVEL', v: r.risk_level },
                                                             ...(r.nodes_scanned ? [{ k: 'NODES', v: String(r.nodes_scanned) }] : []),
                                                         ].map(({ k, v }) => (
-                                                            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11 }}>
+                                                            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 13 }}>
                                                                 <span style={{ color: C.sub }}>{k}</span>
                                                                 <span style={{ color: C.text }}>{v}</span>
                                                             </div>
@@ -481,7 +481,7 @@ function BCell({ children, style }: { children: React.ReactNode; style?: React.C
         <div style={{
             display: 'flex', alignItems: 'center', height: '100%',
             padding: '0 14px', borderRight: '1px solid #1E1E1E',
-            fontSize: 12, color: '#707070', letterSpacing: '0.08em',
+            fontSize: 14, color: '#707070', letterSpacing: '0.08em',
             gap: 6, whiteSpace: 'nowrap', ...style,
         }}>
             {children}
@@ -492,7 +492,7 @@ function BCell({ children, style }: { children: React.ReactNode; style?: React.C
 function SummaryCell({ label, value, valueStyle }: { label: string; value: string; valueStyle?: React.CSSProperties }) {
     return (
         <div style={{ flex: 1, padding: '16px 20px', borderRight: '1px solid #1E1E1E' }}>
-            <div style={{ fontSize: 10, color: '#404040', letterSpacing: '0.12em', marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 12, color: '#404040', letterSpacing: '0.12em', marginBottom: 6 }}>{label}</div>
             <div style={{ fontSize: 18, color: '#E5E5E5', fontFamily: "'JetBrains Mono', monospace", ...valueStyle }}>{value}</div>
         </div>
     );

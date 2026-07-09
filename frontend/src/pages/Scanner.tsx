@@ -977,7 +977,7 @@ export default function Scanner() {
         <Cell style={{ marginLeft: 'auto' }}>
           <button
             onClick={() => setHistoryOpen(o => !o)}
-            style={{ color: historyOpen ? C.acid : C.subdued, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 12, letterSpacing: '0.08em' }}
+            style={{ color: historyOpen ? C.acid : C.subdued, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 14, letterSpacing: '0.08em' }}
           >
             HISTORY [{history.length}]
           </button>
@@ -985,7 +985,7 @@ export default function Scanner() {
         <Cell>
           <button
             onClick={() => { setCode(''); setFilename(''); setResult({ status: 'waiting' }); setLlmOutput(''); setDeepScanStatus('idle'); }}
-            style={{ color: C.subdued, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 12, letterSpacing: '0.08em' }}
+            style={{ color: C.subdued, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 14, letterSpacing: '0.08em' }}
           >
             [ CLR ]
           </button>
@@ -1000,12 +1000,12 @@ export default function Scanner() {
             style={{
               position: 'fixed', top: 44, left: '12rem', right: 0, zIndex: 50,
               background: '#1A0000', borderBottom: `1px solid ${C.red}`,
-              color: C.red, fontSize: 13, padding: '8px 16px',
+              color: C.red, fontSize: 15, padding: '8px 16px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}
           >
             <span>! {toastError}</span>
-            <button onClick={() => setToastError(null)} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }} aria-label="Dismiss error" title="Dismiss">×</button>
+            <button onClick={() => setToastError(null)} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 16 }} aria-label="Dismiss error" title="Dismiss">×</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1026,13 +1026,13 @@ export default function Scanner() {
               }}
             >
               <div style={{ padding: '8px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.12em' }}>SCAN LOG</span>
+                <span style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.12em' }}>SCAN LOG</span>
                 {history.length > 0 && (
-                  <button onClick={() => setHistory([])} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }} aria-label="Clear scan history" title="Clear history">CLR</button>
+                  <button onClick={() => setHistory([])} style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }} aria-label="Clear scan history" title="Clear history">CLR</button>
                 )}
               </div>
               {history.length === 0 ? (
-                <div style={{ padding: 12, fontSize: 11, color: C.muted }}>no entries</div>
+                <div style={{ padding: 12, fontSize: 13, color: C.muted }}>no entries</div>
               ) : history.map(item => (
                 <div
                   key={item.id}
@@ -1045,16 +1045,16 @@ export default function Scanner() {
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 10, color: item.verdict === 'malicious' ? C.red : C.acid, fontWeight: 700 }}>
+                    <span style={{ fontSize: 12, color: item.verdict === 'malicious' ? C.red : C.acid, fontWeight: 700 }}>
                       {item.riskLevel}
                     </span>
-                    <span style={{ fontSize: 10, color: C.subdued }}>{item.timestamp}</span>
+                    <span style={{ fontSize: 12, color: C.subdued }}>{item.timestamp}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: C.subdued, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 13, color: C.subdued, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.codePreview}
                   </div>
                   {item.language && (
-                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{item.language.toUpperCase()}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{item.language.toUpperCase()}</div>
                   )}
                 </div>
               ))}
@@ -1078,7 +1078,7 @@ export default function Scanner() {
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 borderRight: `1px solid ${C.border}`, padding: '0 12px',
-                fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
                 color: C.subdued, height: '100%',
               }}
             />
@@ -1088,7 +1088,7 @@ export default function Scanner() {
                 height: '100%', padding: '0 14px', background: 'transparent',
                 border: 'none', borderRight: `1px solid ${C.border}`,
                 color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em',
+                fontSize: 14, cursor: 'pointer', letterSpacing: '0.08em',
                 transition: 'color 0.15s',
               }}
               onMouseEnter={e => (e.currentTarget.style.color = C.text)}
@@ -1105,7 +1105,7 @@ export default function Scanner() {
                   height: '100%', padding: '0 14px', background: 'transparent',
                   border: 'none', borderRight: `1px solid ${C.border}`,
                   color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em',
+                  fontSize: 14, cursor: 'pointer', letterSpacing: '0.08em',
                   transition: 'color 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.color = C.acid)}
@@ -1134,7 +1134,7 @@ export default function Scanner() {
                         padding: '10px 16px', background: 'transparent',
                         border: 'none', borderBottom: `1px solid ${C.border}`,
                         color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 12, cursor: 'pointer', letterSpacing: '0.06em',
+                        fontSize: 14, cursor: 'pointer', letterSpacing: '0.06em',
                         transition: 'background 0.1s, color 0.1s',
                       }}
                       onMouseEnter={e => {
@@ -1169,7 +1169,7 @@ export default function Scanner() {
                 border: 'none', borderRight: `1px solid ${C.border}`,
                 outline: code.trim() || result.status === 'loading' ? 'none' : `1px solid ${C.border}`,
                 color: code.trim() && result.status !== 'loading' ? '#000' : C.subdued,
-                fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
                 fontWeight: 700, letterSpacing: '0.1em', cursor: code.trim() ? 'pointer' : 'not-allowed',
                 transition: 'background 0.15s, color 0.15s',
               }}
@@ -1186,7 +1186,7 @@ export default function Scanner() {
                   background: 'transparent', border: 'none',
                   borderRight: `1px solid ${C.border}`,
                   color: C.text,
-                  fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
                   letterSpacing: '0.1em', cursor: 'pointer',
                   transition: 'color 0.15s',
                 }}
@@ -1206,7 +1206,7 @@ export default function Scanner() {
                   background: 'transparent', border: 'none',
                   borderRight: `1px solid ${C.border}`,
                   color: C.subdued, fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 12, letterSpacing: '0.08em', cursor: 'pointer',
+                  fontSize: 14, letterSpacing: '0.08em', cursor: 'pointer',
                   transition: 'color 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.color = C.text)}
@@ -1216,7 +1216,7 @@ export default function Scanner() {
               </button>
             )}
 
-            <div style={{ marginLeft: 'auto', padding: '0 14px', fontSize: 11, color: C.muted }}>
+            <div style={{ marginLeft: 'auto', padding: '0 14px', fontSize: 13, color: C.muted }}>
               soteria scanner v2
             </div>
           </div>
@@ -1251,8 +1251,8 @@ export default function Scanner() {
                   }}
                 >
                   <div style={{ fontSize: 28, color: C.acid }}>⬇</div>
-                  <div style={{ fontSize: 13, color: C.acid, letterSpacing: '0.1em' }}>DROP FILE TO LOAD</div>
-                  <div style={{ fontSize: 11, color: C.subdued }}>{SUPPORTED_EXTENSIONS.slice(0, 8).join('  ')} …</div>
+                  <div style={{ fontSize: 15, color: C.acid, letterSpacing: '0.1em' }}>DROP FILE TO LOAD</div>
+                  <div style={{ fontSize: 13, color: C.subdued }}>{SUPPORTED_EXTENSIONS.slice(0, 8).join('  ')} …</div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1281,7 +1281,7 @@ export default function Scanner() {
                     borderRight: `1px solid ${C.border}`,
                     borderBottom: activeTab === tab.key ? `2px solid ${C.acid}` : '2px solid transparent',
                     color: activeTab === tab.key ? C.acid : tab.disabled ? C.muted : C.subdued,
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '0.12em',
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 13, letterSpacing: '0.12em',
                     cursor: tab.disabled ? 'not-allowed' : 'pointer', fontWeight: activeTab === tab.key ? 700 : 400,
                     transition: 'color 0.1s',
                   }}
@@ -1290,7 +1290,7 @@ export default function Scanner() {
                 </button>
               ))}
               {deepScanStatus === 'scanning' && (
-                <div style={{ marginLeft: 'auto', padding: '0 14px', fontSize: 11, color: C.amber, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ marginLeft: 'auto', padding: '0 14px', fontSize: 13, color: C.amber, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.amber, animation: 'pulse 1s infinite' }} />
                   STREAMING
                 </div>
@@ -1307,7 +1307,7 @@ export default function Scanner() {
                 <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   style={{ padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', height: '100%' }}
                 >
-                  <div style={{ fontSize: 11, color: C.muted, letterSpacing: '0.1em', lineHeight: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+                  <div style={{ fontSize: 13, color: C.muted, letterSpacing: '0.1em', lineHeight: 2, fontFamily: "'JetBrains Mono', monospace" }}>
                     <div style={{ color: C.subdued }}>soteria@scanner:~$ <span style={{ color: C.acid }}>_</span></div>
                     <div style={{ marginTop: 16, color: C.muted }}>PASTE OR UPLOAD CODE TO BEGIN ANALYSIS</div>
                     <div style={{ color: C.muted }}>SUPPORTED: {SUPPORTED_EXTENSIONS.slice(0, 6).join(' ').toUpperCase()} + MORE</div>
@@ -1322,7 +1322,7 @@ export default function Scanner() {
                 <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   style={{ padding: 32, fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  <div style={{ fontSize: 11, color: C.amber, letterSpacing: '0.1em', lineHeight: 2 }}>
+                  <div style={{ fontSize: 13, color: C.amber, letterSpacing: '0.1em', lineHeight: 2 }}>
                     <div>{'>'} INITIALIZING SCAN PIPELINE...</div>
                     <div>{'>'} PHASE 1: PATTERN ENGINE</div>
                     <div>{'>'} PHASE 2: ENTROPY PROFILER</div>
@@ -1340,9 +1340,9 @@ export default function Scanner() {
                 <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   style={{ padding: 32, fontFamily: "'JetBrains Mono', monospace" }}
                 >
-                  <div style={{ fontSize: 13, color: C.red, letterSpacing: '0.06em', lineHeight: 1.8 }}>
+                  <div style={{ fontSize: 15, color: C.red, letterSpacing: '0.06em', lineHeight: 1.8 }}>
                     <div>! SCAN FAILURE</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>{result.message}</div>
+                    <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>{result.message}</div>
                   </div>
                 </motion.div>
               )}
@@ -1357,11 +1357,11 @@ export default function Scanner() {
                     borderLeft: `3px solid ${verdictColor}`,
                     paddingLeft: 14, marginBottom: 20,
                   }}>
-                    <div style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.12em', marginBottom: 4 }}>VERDICT</div>
+                    <div style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.12em', marginBottom: 4 }}>VERDICT</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: verdictColor, letterSpacing: '0.04em' }}>
                       {verdictWord}
                     </div>
-                    <div style={{ fontSize: 12, color: C.subdued, marginTop: 4 }}>
+                    <div style={{ fontSize: 14, color: C.subdued, marginTop: 4 }}>
                       {result.riskLevel} RISK · {(result.language || (editorLang !== 'plaintext' ? editorLang : '')).toUpperCase()}
                     </div>
                   </div>
@@ -1369,7 +1369,7 @@ export default function Scanner() {
                   {/* Confidence meter */}
                   {result.confidence != null && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.subdued, marginBottom: 4, letterSpacing: '0.1em' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: C.subdued, marginBottom: 4, letterSpacing: '0.1em' }}>
                         <span>CONFIDENCE</span>
                         <span style={{ color: C.text }}>{result.confidence}%</span>
                       </div>
@@ -1390,8 +1390,8 @@ export default function Scanner() {
                   {/* Reason */}
                   {result.message && (
                     <div style={{ marginBottom: 20, borderLeft: `1px solid ${C.border}`, paddingLeft: 12 }}>
-                      <div style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.1em', marginBottom: 6 }}>ANALYSIS</div>
-                      <div style={{ fontSize: 12, color: C.subdued, lineHeight: 1.7 }}>
+                      <div style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.1em', marginBottom: 6 }}>ANALYSIS</div>
+                      <div style={{ fontSize: 14, color: C.subdued, lineHeight: 1.7 }}>
                         <TypewriterText text={result.message} />
                       </div>
                     </div>
@@ -1416,10 +1416,10 @@ export default function Scanner() {
                       cross-engine consensus instead of asking the user to judge. */}
                   {result.scanId && result.metadata?.auto_verified && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: C.acid, letterSpacing: '0.1em' }}>
+                      <span style={{ fontSize: 13, color: C.acid, letterSpacing: '0.1em' }}>
                         [ ✓ SELF-VERIFIED ]
                       </span>
-                      <span style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.06em' }}>
+                      <span style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.06em' }}>
                         cross-engine consensus · auto-labeled for retraining
                       </span>
                     </div>
@@ -1432,8 +1432,8 @@ export default function Scanner() {
                       {result.metadata.gcn_probability != null && (
                         <div style={{ padding: '10px 14px', borderBottom: result.metadata.snn_temporal ? `1px solid ${C.border}` : 'none' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                            <span style={{ fontSize: 10, color: C.subdued, letterSpacing: '0.12em' }}>GCN STRUCT</span>
-                            <span style={{ fontSize: 12, color: result.metadata.gcn_probability > 0.5 ? C.red : C.acid, fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span style={{ fontSize: 12, color: C.subdued, letterSpacing: '0.12em' }}>GCN STRUCT</span>
+                            <span style={{ fontSize: 14, color: result.metadata.gcn_probability > 0.5 ? C.red : C.acid, fontFamily: "'JetBrains Mono', monospace" }}>
                               {(result.metadata.gcn_probability * 100).toFixed(1)}%
                             </span>
                           </div>
@@ -1451,8 +1451,8 @@ export default function Scanner() {
                       {result.metadata.snn_temporal && (
                         <div style={{ padding: '10px 14px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                            <span style={{ fontSize: 10, color: C.subdued, letterSpacing: '0.12em' }}>SNN TEMPORAL</span>
-                            <span style={{ fontSize: 12, color: result.metadata.snn_temporal.is_anomalous ? C.red : C.acid, fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span style={{ fontSize: 12, color: C.subdued, letterSpacing: '0.12em' }}>SNN TEMPORAL</span>
+                            <span style={{ fontSize: 14, color: result.metadata.snn_temporal.is_anomalous ? C.red : C.acid, fontFamily: "'JetBrains Mono', monospace" }}>
                               {(result.metadata.snn_temporal.anomaly_prob * 100).toFixed(1)}%
                             </span>
                           </div>
@@ -1464,7 +1464,7 @@ export default function Scanner() {
                               transition: 'width 0.4s ease',
                             }} />
                           </div>
-                          <div style={{ fontSize: 10, color: C.subdued, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>
+                          <div style={{ fontSize: 12, color: C.subdued, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>
                             ISI-CV: {result.metadata.snn_temporal.isi_cv.toFixed(2)}&nbsp;&nbsp;RATE: {result.metadata.snn_temporal.firing_rate_hz.toFixed(1)} Hz
                           </div>
                         </div>
@@ -1476,7 +1476,7 @@ export default function Scanner() {
                   {result.summary && result.vulnerabilities && result.vulnerabilities.length > 0 && (
                     <div style={{
                       background: 'rgba(255,140,0,0.06)', border: `1px solid rgba(255,140,0,0.25)`,
-                      padding: '10px 14px', marginBottom: 20, fontSize: 12, color: '#FFBA60', lineHeight: 1.6,
+                      padding: '10px 14px', marginBottom: 20, fontSize: 14, color: '#FFBA60', lineHeight: 1.6,
                     }}>
                       <span style={{ color: C.amber, fontWeight: 700, marginRight: 8 }}>!</span>
                       {result.summary}
@@ -1486,7 +1486,7 @@ export default function Scanner() {
                   {/* Vuln groups */}
                   {sortedGroups.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.12em', marginBottom: 10 }}>
+                      <div style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.12em', marginBottom: 10 }}>
                         FINDINGS — {result.vulnerabilities!.length} ISSUE{result.vulnerabilities!.length !== 1 ? 'S' : ''} / {sortedGroups.length} CATEGOR{sortedGroups.length !== 1 ? 'IES' : 'Y'}
                       </div>
                       {sortedGroups.map(([cat, items]) => {
@@ -1507,18 +1507,18 @@ export default function Scanner() {
                               }}
                             >
                               <span style={{ width: 6, height: 6, borderRadius: '50%', background: sevColor(topSev), flexShrink: 0 }} />
-                              <span style={{ fontSize: 12, color: C.text, flex: 1, textAlign: 'left', fontWeight: 700 }}>{cat}</span>
+                              <span style={{ fontSize: 14, color: C.text, flex: 1, textAlign: 'left', fontWeight: 700 }}>{cat}</span>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 {['CRITICAL','HIGH','MEDIUM','LOW'].map(sev => {
                                   const cnt = items.filter(v => v.severity === sev).length;
                                   return cnt > 0 ? (
-                                    <span key={sev} style={{ fontSize: 10, padding: '1px 4px', color: sevColor(sev), border: `1px solid ${sevColor(sev)}`, opacity: 0.7 }}>
+                                    <span key={sev} style={{ fontSize: 12, padding: '1px 4px', color: sevColor(sev), border: `1px solid ${sevColor(sev)}`, opacity: 0.7 }}>
                                       {cnt}{sev[0]}
                                     </span>
                                   ) : null;
                                 })}
                               </div>
-                              <span style={{ fontSize: 12, color: C.muted }}>{isOpen ? '▾' : '▸'}</span>
+                              <span style={{ fontSize: 14, color: C.muted }}>{isOpen ? '▾' : '▸'}</span>
                             </button>
 
                             {/* Expanded findings */}
@@ -1537,20 +1537,20 @@ export default function Scanner() {
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                   >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                                      <span style={{ fontSize: 10, color: sevColor(v.severity), fontWeight: 700, border: `1px solid ${sevColor(v.severity)}`, padding: '1px 4px', opacity: 0.8 }}>
+                                      <span style={{ fontSize: 12, color: sevColor(v.severity), fontWeight: 700, border: `1px solid ${sevColor(v.severity)}`, padding: '1px 4px', opacity: 0.8 }}>
                                         {v.severity}
                                       </span>
-                                      <span style={{ fontSize: 11, color: C.acid }}>LINE {v.line}</span>
-                                      {v.cwe && <span style={{ fontSize: 10, color: C.muted }}>{v.cwe}</span>}
+                                      <span style={{ fontSize: 13, color: C.acid }}>LINE {v.line}</span>
+                                      {v.cwe && <span style={{ fontSize: 12, color: C.muted }}>{v.cwe}</span>}
                                     </div>
-                                    <div style={{ fontSize: 11, color: C.subdued, lineHeight: 1.5 }}>{v.description}</div>
+                                    <div style={{ fontSize: 13, color: C.subdued, lineHeight: 1.5 }}>{v.description}</div>
                                     {v.snippet && (
-                                      <div style={{ fontSize: 10, color: C.muted, marginTop: 3, fontFamily: "'JetBrains Mono', monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      <div style={{ fontSize: 12, color: C.muted, marginTop: 3, fontFamily: "'JetBrains Mono', monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {v.snippet}
                                       </div>
                                     )}
                                     {v.fix_hint && (
-                                      <div style={{ fontSize: 10, color: '#5AE65A', marginTop: 4 }}>
+                                      <div style={{ fontSize: 12, color: '#5AE65A', marginTop: 4 }}>
                                         FIX → {v.fix_hint}
                                       </div>
                                     )}
@@ -1571,12 +1571,12 @@ export default function Scanner() {
                 <motion.div key="analysis" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
                 >
-                  <div style={{ fontSize: 11, color: C.subdued, letterSpacing: '0.12em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 13, color: C.subdued, letterSpacing: '0.12em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>KYBER DEEP ANALYSIS</span>
                     {deepScanStatus === 'done' && <span style={{ color: C.acid }}>[ COMPLETE ]</span>}
                   </div>
                   <div style={{ flex: 1, overflow: 'auto', background: C.dim, padding: 16, border: `1px solid ${C.border}` }}>
-                    <pre style={{ fontSize: 12, color: C.text, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <pre style={{ fontSize: 14, color: C.text, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
                       {llmOutput || (deepScanStatus === 'scanning' ? 'RUNNING KYBER ANALYSIS...' : '')}
                       {deepScanStatus === 'scanning' && (
                         <span style={{ display: 'inline-block', width: 8, height: 14, background: C.acid, marginLeft: 2, verticalAlign: 'middle', animation: 'blink 0.8s step-end infinite' }} />
@@ -1607,7 +1607,7 @@ function Cell({ children, style }: { children: React.ReactNode; style?: React.CS
       display: 'flex', alignItems: 'center',
       padding: '0 14px', height: '100%',
       borderRight: '1px solid #1E1E1E',
-      fontSize: 12, color: '#707070', letterSpacing: '0.08em',
+      fontSize: 14, color: '#707070', letterSpacing: '0.08em',
       gap: 6, whiteSpace: 'nowrap',
       ...style,
     }}>
@@ -1622,8 +1622,8 @@ function MetaCell({ label, value }: { label: string; value: string }) {
       flex: 1, padding: '8px 12px',
       borderRight: '1px solid #1E1E1E',
     }}>
-      <div style={{ fontSize: 10, color: '#404040', letterSpacing: '0.1em', marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 12, color: '#E5E5E5' }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#404040', letterSpacing: '0.1em', marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 14, color: '#E5E5E5' }}>{value}</div>
     </div>
   );
 }

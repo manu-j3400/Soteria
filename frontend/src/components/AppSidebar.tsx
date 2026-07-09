@@ -36,14 +36,14 @@ export default function AppSidebar() {
 
       {/* ── Logo ── */}
       <div className="h-16 flex items-center gap-3 px-5 flex-shrink-0" style={S.topBorder}>
-        <img src="/soteria-logo.png" alt="Soteria" className="w-9 h-9 object-cover" style={{ borderRadius: 0 }} />
-        <span className="text-[15px] font-bold tracking-[0.08em] text-white">SOTERIA</span>
+        <img src="/soteria-logo.png" alt="Soteria" className="w-11 h-11 object-cover" style={{ borderRadius: 0 }} />
+        <span className="text-[17px] font-bold tracking-[0.08em] text-white">SOTERIA</span>
       </div>
 
       {/* ── Status pill ── */}
       <div className="px-5 py-2 flex-shrink-0" style={S.midBorder}>
         <span
-          className="flex items-center gap-2 text-[13px] font-bold"
+          className="flex items-center gap-2 text-[15px] font-bold"
           style={{
             color: COLORS.acid,
             padding: '3px 8px',
@@ -63,12 +63,12 @@ export default function AppSidebar() {
           const active = pathname === to || (to !== '/dashboard' && pathname.startsWith(to));
           return (
             <Link key={to} to={to}
-              className="relative flex items-center gap-3 px-5 py-[11px] text-[13px] font-bold tracking-[0.06em] transition-all duration-100 no-underline"
+              className="relative flex items-center gap-3 px-5 py-[11px] text-[15px] font-bold tracking-[0.06em] transition-all duration-100 no-underline"
               style={{ color: active ? COLORS.text : COLORS.sub, background: active ? COLORS.surface : 'transparent' }}>
               {active && (
                 <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: COLORS.acid }} />
               )}
-              <Icon className="w-4 h-4 flex-shrink-0 opacity-70" />
+              <Icon className="w-5 h-5 flex-shrink-0 opacity-70" />
               {label}
             </Link>
           );
@@ -82,7 +82,7 @@ export default function AppSidebar() {
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
           aria-label="Start new scan"
-          className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-bold tracking-[0.06em] transition-all duration-100"
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-[15px] font-bold tracking-[0.06em] transition-all duration-100"
           style={btnHover ? S.pillHover : S.pill}>
           <Plus className="w-3 h-3" />
           New Scan
@@ -93,8 +93,8 @@ export default function AppSidebar() {
       <div className="px-5 py-4 flex-shrink-0" style={S.botBorder}>
         {user && (
           <>
-            <div className="text-[13px] tracking-[0.06em] mb-0.5" style={{ color: COLORS.sub }}>Operator</div>
-            <div className="text-[13px] font-bold truncate mb-3" style={{ color: COLORS.text }}>
+            <div className="text-[15px] tracking-[0.06em] mb-0.5" style={{ color: COLORS.sub }}>Operator</div>
+            <div className="text-[15px] font-bold truncate mb-3" style={{ color: COLORS.text }}>
               {user.email ?? user.name}
             </div>
           </>
@@ -104,7 +104,7 @@ export default function AppSidebar() {
           onMouseEnter={() => setLogoutHover(true)}
           onMouseLeave={() => setLogoutHover(false)}
           aria-label="Sign out"
-          className="flex items-center gap-2 text-[13px] font-bold tracking-[0.06em] transition-all duration-100"
+          className="flex items-center gap-2 text-[15px] font-bold tracking-[0.06em] transition-all duration-100"
           style={{ color: logoutHover ? COLORS.red : COLORS.muted }}>
           <LogOut className="w-3 h-3" />
           Sign Out
