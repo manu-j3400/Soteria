@@ -3,7 +3,7 @@ flask-cors
 pandas
 joblib
 fpdf2
-scikit-learn>=1.9.0
+scikit-learn>=1.9.1
 watchdog
 numpy<3.0.0
 gunicorn
