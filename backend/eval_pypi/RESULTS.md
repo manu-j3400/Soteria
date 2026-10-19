@@ -87,6 +87,35 @@ Feross's patterns, seen but rare in samples:
   test corpus) were quarantined by Norton after download
 - licensing obfuscation: none in samples. Bundled/vendored: 3 releases.
 
+## Package-level dataflow rules (Oct 19)
+
+`backend/src/dataflow_rules.py`: def-use taint over the AST, per package.
+Sources: network responses, whole-environment dumps, host identity,
+credential files, decoders. Sinks: exec/eval, subprocess/os.system, network
+sends, plus constant shell downloaders and reverse shells. No model.
+
+| version | rule | week flagged | precision | Datadog recall (raw / unique payloads) |
+|---|---|---|---|---|
+| v2 (bug-fixed, untuned) | strong | 3.5% | 0.08% (pyyi caught) | 39.6% / 23% |
+| v2 | install-time only | 0.1% (9) | 0 of 9 | 39.9% / 21% |
+| v3 (tuned on this week) | strong | 1.7% | 0.17% (pyyi caught) | 35.3% / 17% |
+| v3 | install-time only | 0.05% (7) | 0 of 7 | 37.8% / 18% |
+
+0 malicious among 240 hand-read dataflow-flagged releases. v3 was tuned on
+these labels, so its week numbers are optimistic; the live-collector week
+(Oct 19 to 23) is the held-out test. v2 outputs are in `scores/dataflow_v2/`.
+
+Dataflow false positives (v2 sample, n=240): dev tools running subprocesses
+57, LAN-IP lookups 54, test code 33, device registration/telemetry 30,
+installers and self-updaters (curl | sh, download wheel then pip install) 29,
+import-hook mocks 22. `webrunc` execs code from a caller-supplied URL: a
+dangerous API by design, not malware.
+
+What no .py rule can see (subagent read of missed Datadog clusters, not
+counted exactly): metadata-only typosquats, droppers that only declare a
+stealer in install_requires, payloads in .so/.bat/.dll/.sh/.js files.
+Estimated 100 to 150 of 758 unique payload clusters.
+
 ## Caveats
 
 - Backfill, not live: malware removed before download (46 known) is missing,
