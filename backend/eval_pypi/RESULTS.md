@@ -111,6 +111,26 @@ installers and self-updaters (curl | sh, download wheel then pip install) 29,
 import-hook mocks 22. `webrunc` execs code from a caller-supplied URL: a
 dangerous API by design, not malware.
 
+### Live held-out run, interim (collected Oct 19 to 20, v3 rules, untuned on it)
+
+1,211 releases (all 799 new projects, 484 of 8,641 updates), downloaded within
+minutes of publish.
+
+| rule | flagged | precision | 95% CI |
+|---|---|---|---|
+| model, any unit | 99.2% | 0.02% | to 2.5% |
+| dataflow strong | 1.7% (14) | 8.3% | 2.0% to 34% |
+| dataflow any | 2.7% (19) | 6.0% | 1.4% to 26% |
+
+True positives: `asurion` 99.0.0 (dependency-confusion PoC, MAL-2026-18045,
+flagged install-time) and `pyyi` 2.5.0, a re-upload of the pyyi payload
+(`run_payload`: base64+gzip from a space-z.ai server, then exec) after
+PyPI removed 2.4.x. Not in OSV/Datadog at scan time; still live on PyPI
+Oct 19. Missed: `vinted-mocked-apis` and `memories-core` (dependency-confusion
+beacons passing the hostname through a function parameter, which the rules
+don't track). New false-positive shapes seen but not tuned on: NSS `certutil`,
+`start cmd.exe /k`, `os.dup` of stdout read as a reverse shell.
+
 What no .py rule can see (subagent read of missed Datadog clusters, not
 counted exactly): metadata-only typosquats, droppers that only declare a
 stealer in install_requires, payloads in .so/.bat/.dll/.sh/.js files.
