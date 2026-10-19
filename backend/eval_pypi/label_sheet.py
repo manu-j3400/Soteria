@@ -4,8 +4,13 @@ source already marks as malicious.
 
 Writes to <data>/scores/<tag>/:
   labels.csv        one row per sampled release; fill in `label`
-                    (malicious / benign / unsure) and fix `pattern`
-  review/<n>.md     the release's top-scoring units, for reading
+                    (malicious / benign / unsure) and fix `pattern`.
+                    Rerunning keeps label/pattern/notes already filled in.
+  review/<n>.md     the release's top-scoring units and dataflow findings,
+                    for reading
+
+Rules come from precision.RULES; the df_* rules are sampled only when
+<data>/scores/dataflow/packages.csv exists.
 
 `pattern` is pre-filled with a heuristic guess (see suggest_pattern) so the
 labeler only corrects it. Patterns line up with Feross's list where they can:
@@ -88,6 +93,20 @@ def load_units(sdir: Path) -> dict[tuple[str, str], list[dict]]:
     return by_pkg
 
 
+def load_findings(root: Path, keys: set) -> dict[tuple[str, str], list[dict]]:
+    path = root / "scores" / "dataflow" / "findings.jsonl"
+    by_pkg: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    if path.exists():
+        with open(path) as fh:
+            for line in fh:
+                f = json.loads(line)
+                k = (f["name"], str(f["version"]))
+                if k in keys:
+                    f["raw"] = unpack_code(f["raw"])
+                    by_pkg[k].append(f)
+    return by_pkg
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--data", default="~/soteria_pypi_eval")
@@ -96,7 +115,8 @@ def main():
     p.add_argument("--seed", type=int, default=42)
     a = p.parse_args()
 
-    sdir = Path(a.data).expanduser() / "scores" / a.tag
+    root = Path(a.data).expanduser()
+    sdir = root / "scores" / a.tag
     df = pd.read_csv(sdir / "packages_crosschecked.csv", dtype={"version": str})
     df["known_malicious"] = df["known_malicious"].fillna("")
     by_pkg = load_units(sdir)
@@ -104,13 +124,17 @@ def main():
 
     # sample separately per flag rule so each rule gets its own precision estimate
     picked: dict[tuple[str, str], set[str]] = defaultdict(set)
-    df = add_derived(df)
+    df = add_derived(df, root)
     for rule, col in RULES.items():
+        if col not in df:
+            continue
         pool = df[(df[col] > 0) & (df["known_malicious"] == "")]
         keys = list(zip(pool["name"], pool["version"]))
         for k in rng.sample(keys, min(a.n, len(keys))):
             picked[k].add(rule)
 
+    findings = load_findings(root, set(picked))
+    df_cols = df.attrs.get("df_rules", [])
     review = sdir / "review"
     review.mkdir(exist_ok=True)
     rows = []
@@ -124,7 +148,8 @@ def main():
         rows.append({"id": i, "name": key[0], "version": key[1], "sampled_for": ",".join(sorted(rules)),
                      "new_project": r.get("new_project"), "max_prob": r.get("max_prob"),
                      "max_unit": r.get("max_unit"), "risk_cats": r.get("risk_cats"),
-                     "pypi_status": r.get("pypi_status"), "summary": summary[:120],
+                     "pypi_status": r.get("pypi_status"),
+                     "df_rules": ",".join(c for c in df_cols if r.get(c, 0) > 0), "summary": summary[:120],
                      "pattern": suggest_pattern(units, summary), "label": "", "notes": ""})
         md = [f"# {key[0]} {key[1]}", "", f"summary: {summary}", f"pypi: https://pypi.org/project/{key[0]}/{key[1]}/",
               f"status now: {r.get('pypi_status')}  |  risk: {r.get('risk_cats')}", ""]
@@ -132,9 +157,21 @@ def main():
         for u in (units[:3] + [u for u in risky if u not in units[:3]][:2]):
             md += [f"## {u['file']}:{u['line']} {u['unit']}  p={u['prob']}  risk={u.get('risk')}",
                    f"cc: {u.get('cc')}", "```python", u["raw"][:4000], "```", ""]
+        for f in findings.get(key, [])[:5]:
+            md += [f"## dataflow {f['rule']}: {f['file']}:{f['line']} {f['func']}  install={f['install_time']}",
+                   "```python", f["raw"][:4000], "```", ""]
         (review / f"{i:04d}.md").write_text("\n".join(md))
 
     out = pd.DataFrame(rows)
+    prev_path = sdir / "labels.csv"
+    if prev_path.exists() and len(out):
+        prev = pd.read_csv(prev_path, dtype={"version": str}).fillna("")
+        prev = {(r.name, r.version): r for r in prev[prev["label"] != ""].itertuples()}
+        for i, k in enumerate(zip(out["name"], out["version"])):
+            if k in prev:
+                for c in ("label", "pattern", "notes"):
+                    out.loc[i, c] = getattr(prev[k], c)
+        print(f"kept {out['label'].ne('').sum()} existing labels from {prev_path}")
     out.to_csv(sdir / "labels.csv", index=False)
     print(f"{len(out)} releases to label -> {sdir / 'labels.csv'}")
     print(out["pattern"].value_counts().to_string())

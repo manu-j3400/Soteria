@@ -26,7 +26,12 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import sys
+
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from features import read_jsonl  # noqa: E402
 
 OSV_ZIP = "https://osv-vulnerabilities.storage.googleapis.com/PyPI/all.zip"
 DATADOG_MANIFEST = ("https://raw.githubusercontent.com/DataDog/malicious-software-packages-dataset/"
@@ -129,7 +134,7 @@ def main():
     df["known_malicious"] = df.apply(osv_hit, axis=1)
 
     # every release the downloader couldn't fetch is a takedown candidate too
-    man = [json.loads(l) for l in (root / "manifest.jsonl").read_text().splitlines()]
+    man = read_jsonl(root / "manifest.jsonl")
     unavailable = [r for r in man if r.get("status") == "unavailable"]
     unavail_osv = sum(bool(mal.get(_norm(r["name"]))) for r in unavailable)
 

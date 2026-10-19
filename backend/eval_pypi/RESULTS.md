@@ -108,6 +108,31 @@ python3 -I label_sheet.py --data ~/soteria_pypi_eval --tag baseline --n 150
 python3 -I precision.py --data ~/soteria_pypi_eval --tag baseline
 ```
 
+`report.sh <data_dir> [tags...]` runs the scoring half in one go: score.py
+(default tag `baseline`; other tags use `ML_master/acidModel_<tag>.pkl`),
+dataflow_scan.py, crosscheck.py `--refresh-osv`, live_strata.py when needed,
+label_sheet.py, precision.py. `SKIP_SCORE=1` reuses existing scores.
+label_sheet.py keeps labels already filled in.
+
+When `scores/dataflow/packages.csv` exists, precision.py and label_sheet.py
+add dataflow rules: `df_any` (any rule fires), `df_strong` (any except
+`decoded_exec` / `exfil_hostinfo`), `df_install` (finding in install-time
+code), `model_and_df` (any unit >= 0.5 and `df_any`). Datadog recall uses the
+malware dir's dataflow scan, so run `dataflow_scan.py --data
+~/soteria_malware_samples` first.
+
+Live collection (keeps malware that's taken down within days):
+
+```bash
+python3 -I fetch_pypi.py live --hours 168 --update-rate 0.06 --out ~/soteria_pypi_live
+./report.sh ~/soteria_pypi_live
+```
+
+A live dir has no strata.json from the fetcher; live_strata.py builds it from
+releases_all.jsonl (deduped) and the manifest on every report.sh run. Update
+weights use the actual fetched share, which runs slightly above
+`--update-rate` because releases re-seen in a later poll get another draw.
+
 Nothing from PyPI or the malware set is installed, imported or executed. Only
 `.py` text is kept; Datadog samples stay in their encrypted zips and stored code
 snippets are zlib+base64 encoded so antivirus doesn't delete result files.

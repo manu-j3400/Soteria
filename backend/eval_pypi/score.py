@@ -28,6 +28,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from features import read_jsonl  # noqa: E402
 
 DEFAULT_MODEL = Path(__file__).resolve().parent.parent / "ML_master" / "acidModel.pkl"
 MAX_UNITS_PER_PKG = 20_000
@@ -142,7 +143,7 @@ def main():
     a = p.parse_args()
 
     root = Path(a.data).expanduser()
-    recs = [json.loads(l) for l in (root / "manifest.jsonl").read_text().splitlines()]
+    recs = read_jsonl(root / "manifest.jsonl")
     recs = [r for r in recs if r.get("status") == "ok"]
     for r in recs:  # ingest_datadog.py manifest: pkg/<version>/<date>-pkg-v<version>.zip
         if "zip" in r:

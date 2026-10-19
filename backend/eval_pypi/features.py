@@ -49,6 +49,19 @@ def is_install_time(rel_path: str) -> bool:
 MAX_SOURCE_BYTES = 1_000_000
 
 
+def read_jsonl(path: Path) -> list[dict]:
+    """Parse a JSONL file, skipping a half-written last line (the live
+    collector appends to manifest.jsonl while other scripts read it)."""
+    import json
+    out = []
+    for line in Path(path).read_text().splitlines():
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
 def pack_code(src: str) -> str:
     """Store code snippets zlib+base64 encoded. Snippets from malicious
     packages are real malware, and antivirus quarantines any plaintext file
