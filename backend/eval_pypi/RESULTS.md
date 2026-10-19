@@ -1,0 +1,113 @@
+# Soteria on one week of PyPI (Oct 10 to 17, 2026)
+
+First run, Oct 17. Hand labels are a first pass and still need human review.
+Rerun `crosscheck.py` + `precision.py` around Oct 21 to 22: takedown reports
+lag publishes, so more true positives will show up.
+
+## Data
+
+| | releases |
+|---|---|
+| Releases in the week (changelog) | 74,441 (13,174 from new projects, 61,267 updates) |
+| Fetched: all new-project releases + random 3,000 updates | 16,174 |
+| Scored (.py files present) | 15,203 (11.2M functions, median 196 per release) |
+| Gone before download | 373, of which 46 are known malware |
+| Known malware among scored | 2 (`pyyi` 2.4.1, 2.4.2; MAL-2026-17866, removed from PyPI Oct 17) |
+
+Ground truth: OSV `MAL-*` / malicious-package advisories (includes
+ossf/malicious-packages), Datadog malicious-packages manifest, PyPI removal.
+Update rows are reweighted x20.4 to the full week.
+
+## Models
+
+| model | training data | features | held-out mal. F1 | held-out FPR (per function) |
+|---|---|---|---|---|
+| baseline (`acidModel.pkl`) | 5,780 original samples | 101 AST | 0.81 (reported) | 2.1% (reported) |
+| realdata | + 26.5k real PyPI benign units (Sep 24 to 26) + 8.9k Datadog malware units | 101 AST | 0.863 | 5.1% |
+| constcat | same rows | 101 AST + 20 constant categories | 0.872 | 4.6% |
+
+Held-out split is grouped by package. Datadog recall for the retrained models
+is not reported because ~85% of those packages were in their training set.
+
+## Results on the week
+
+| model / rule | functions flagged | releases flagged (week) | precision | 95% CI upper | Datadog recall |
+|---|---|---|---|---|---|
+| baseline, any unit >= 0.5 | 34.9% | 99.2% | 0.003% | 2.5% | 68% |
+| baseline, install-time unit | | 84.6% | 0.003% | 2.5% | 49% |
+| realdata, any | 2.8% | 91.8% | 0.003% | 2.9% | n/a |
+| realdata, install-time | | 47.5% | 0 of 6,376 | 5.4% | n/a |
+| constcat, any | 2.5% | 90.3% | 0.003% | 3.0% | n/a |
+| constcat, install-time | | 45.5% | 0 of 5,905 | 6.1% | n/a |
+| risky constant category alone (no model) | | 8.5% | 0 of 1,037 | 2.5% | 35% |
+| baseline + risky constant, same unit | | 2.6% | 0 of 262 | 2.5% | 11% |
+
+0 malicious found in 682 hand-reviewed flagged releases. The only known
+malware still downloadable (`pyyi`) ranks around the median under every model
+(top 30 to 60%), so no threshold catches it without flagging a third of PyPI.
+
+## Why
+
+1. **Training shortcut.** `Import` nodes appear in 76% of malicious training
+   samples and 7% of benign. Benign = CodeSearchNet functions, malicious =
+   mostly CyberNative DPO (LLM-written *vulnerable* code, not malware). The
+   baseline learned "has imports / looks like a module" = malicious.
+2. **Wrong unit.** Even at 2.5% per function, a 196-function release has
+   1 - 0.975^196 ≈ 99% chance of at least one flag. Scoring has to be
+   per package, not max-over-functions.
+3. **Constants help, a little.** Same rows, constant categories add +0.009 F1
+   and -0.5pt FPR. They don't fix the unit problem.
+4. **pyyi miss.** Decode (`gzip.decompress(b64decode(...))`, cli.py:678) and
+   `exec(compile(...))` (cli.py:681) are separate statements; server URL comes
+   from `PY2_SERVER` env var with fallback to an unknown domain. Needs
+   dataflow (source -> decode -> exec), not a single-expression check.
+
+## False-positive patterns (first-pass labels)
+
+Baseline, any-unit sample (n=150): import-only modules 31%, ordinary functions
+28%, test files 27%, other module-level code 9%.
+
+Baseline + risky constant, same unit (n=150): Telegram/Discord/Slack bot code
+42%, SDKs reading `*_API_KEY` and calling their own API 29%, tunnel/paste host
+mentions in docs/tests 11%, public-IP lookups (ipify etc.) 8%.
+
+Risky constants alone (n=150): API-key SDKs 40%, bot code 23%, hardcoded
+backend IPs 9%, test fixtures 9%, IP lookups 7%.
+
+Feross's patterns, seen but rare in samples:
+- binary fetchers: `pulsecheckcli` (shoutrrr from GitHub releases),
+  `chatify-app` (downloads Ollama)
+- install-time network: `camb` setup.py runs `git clone`
+- security tooling: `adxpl-forge` (AD red-team kit) and `ttprism` (attack
+  test corpus) were quarantined by Norton after download
+- licensing obfuscation: none in samples. Bundled/vendored: 3 releases.
+
+## Caveats
+
+- Backfill, not live: malware removed before download (46 known) is missing,
+  so true positives are undercounted. `fetch_pypi.py live` fixes this.
+- Constant-category gate rules were tuned on 28 smoke-test packages from
+  inside the eval window.
+- Labels are one reviewer's first pass, heuristic patterns plus manual review
+  of risky and install-time units.
+- Datadog samples are mostly GuardDog detections (selection bias).
+
+## Reproduce
+
+```bash
+cd backend/eval_pypi
+python3 -I fetch_pypi.py backfill --days 7 --update-sample 3000 --out ~/soteria_pypi_eval
+python3 -I ingest_datadog.py --out ~/soteria_malware_samples --before 2026-10-01
+python3 -I fetch_pypi.py backfill --days 2 --lag-hours 504 --new-sample 1000 \
+    --update-sample 1000 --seed 7 --out ~/soteria_pypi_train_benign
+python3 -I train_variants.py
+python3 -I score.py --data ~/soteria_pypi_eval --tag baseline
+python3 -I score.py --data ~/soteria_pypi_eval --tag constcat --model ../ML_master/acidModel_constcat.pkl
+python3 -I crosscheck.py --data ~/soteria_pypi_eval --tag baseline
+python3 -I label_sheet.py --data ~/soteria_pypi_eval --tag baseline --n 150
+python3 -I precision.py --data ~/soteria_pypi_eval --tag baseline
+```
+
+Nothing from PyPI or the malware set is installed, imported or executed. Only
+`.py` text is kept; Datadog samples stay in their encrypted zips and stored code
+snippets are zlib+base64 encoded so antivirus doesn't delete result files.

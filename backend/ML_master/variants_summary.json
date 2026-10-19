@@ -1,0 +1,18 @@
+{
+ "rows": 41132,
+ "malicious": 9258,
+ "benign_real": 26500,
+ "malware_real": 8852,
+ "realdata": {
+  "test_f1_mal": 0.862708719851577,
+  "test_recall_mal": 0.8751568381430364,
+  "test_precision_mal": 0.850609756097561,
+  "test_fpr": 0.05064076064489458
+ },
+ "constcat": {
+  "test_f1_mal": 0.8719701678060907,
+  "test_recall_mal": 0.8801756587202008,
+  "test_precision_mal": 0.8639162561576355,
+  "test_fpr": 0.045680033071517155
+ }
+}

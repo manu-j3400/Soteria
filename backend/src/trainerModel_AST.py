@@ -11,17 +11,8 @@ from pathlib import Path
 
 
 
-def modelTrainer(data_path = str(Path(__file__).parent.parent / "CSV_master" / "numericFeatures.csv")):
-    df = pd.read_csv(data_path)
-
-    # Prepare X(features) and y (Target Label)
-    X = df.drop(['LABEL', 'SOURCE'], axis=1)
-    y = df['LABEL']
-
-    # Reduced test size for more training data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42, stratify=y)
-
-    print("  Building Ensemble Model...  ")
+def build_ensemble():
+    """RF + GB + ET + LR soft-voting ensemble used for acidModel.pkl."""
     
     # Define multiple base classifiers
     rf = RandomForestClassifier(
@@ -72,7 +63,22 @@ def modelTrainer(data_path = str(Path(__file__).parent.parent / "CSV_master" / "
         voting='soft',
         n_jobs=-1
     )
-    
+    return ensemble
+
+
+def modelTrainer(data_path = str(Path(__file__).parent.parent / "CSV_master" / "numericFeatures.csv")):
+    df = pd.read_csv(data_path)
+
+    # Prepare X(features) and y (Target Label)
+    X = df.drop(['LABEL', 'SOURCE'], axis=1)
+    y = df['LABEL']
+
+    # Reduced test size for more training data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42, stratify=y)
+
+    print("  Building Ensemble Model...  ")
+    ensemble = build_ensemble()
+
     # Suppress sklearn internal matmul overflow warnings from LR predict_proba
     # (known sklearn/numpy compat issue on Python 3.14; model validity unaffected)
     _filter = warnings.filterwarnings("ignore", category=RuntimeWarning, module="sklearn")
