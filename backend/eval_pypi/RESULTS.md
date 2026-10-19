@@ -1,5 +1,10 @@
 # Soteria on one week of PyPI (Oct 10 to 17, 2026)
 
+Scope: Soteria is a multi-language detector (tree-sitter parsing plus the
+vulnerability_db pattern set for Go, Rust and others). This evaluation covers
+only the Python path: the AST model, constant categories and the Python
+dataflow rules. Nothing here measures the other language paths.
+
 First run, Oct 17. Hand labels are a first pass and still need human review.
 Rerun `crosscheck.py` + `precision.py` around Oct 21 to 22: takedown reports
 lag publishes, so more true positives will show up.

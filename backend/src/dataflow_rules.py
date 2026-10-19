@@ -46,12 +46,13 @@ NETFILE = "NETFILE"  # a path whose contents came from the network
 HOSTID = "HOSTID"    # hostname / username only (subset of HOSTINFO)
 EMPTY: frozenset[str] = frozenset()
 
-_NET_BASES = {"requests", "httpx", "urllib3", "aiohttp", "session", "s", "client", "http",
-              "sess", "pool", "conn", "connection", "sock", "socket", "urllib", "request", "r"}
+# Receivers we trust to be network clients. Short or generic names (r, s, client,
+# pool, conn, request) are mostly dicts, DB pools or Flask's incoming request.
+_NET_BASES = {"requests", "httpx", "urllib3", "aiohttp", "session", "sess", "sock", "socket", "urllib"}
 _NET_FETCH = {"get", "post", "put", "patch", "request", "urlopen", "recv", "recvfrom", "recv_into",
               "read_url", "fetch"}
 _NET_SEND = {"post", "put", "patch", "request", "urlopen", "send", "sendall", "sendto",
-             "sendmail", "send_message", "Request"}
+             "sendmail", "send_message"}
 _DECODERS = {"b64decode", "b32decode", "b16decode", "b85decode", "a85decode", "urlsafe_b64decode",
              "decodebytes", "decompress", "fromhex", "unhexlify", "a2b_hex", "a2b_base64",
              "decrypt", "loads"}  # loads: marshal/pickle; json.loads propagates without DECODED
@@ -59,8 +60,16 @@ _CODE_EXEC = {"exec", "eval", "compile", "__import__"}
 _CMD_EXEC = {"system", "popen", "Popen", "run", "call", "check_call", "check_output",
              "getoutput", "getstatusoutput", "startfile", "execv", "execve", "execl", "spawnv"}
 _CMD_BASES = {"os", "subprocess", "commands", "pty"}
+# bare-name calls that are commands no matter where they were imported from;
+# run/call/execv only count when imported from subprocess/os (see _cmd_imports)
+_CMD_BARE = {"system", "popen", "Popen", "check_output", "check_call", "getoutput",
+             "getstatusoutput", "startfile"}
+# helper names too generic to resolve across a package by name alone
+_GENERIC_NAMES = {"run", "get", "post", "put", "call", "read", "open", "send", "request", "fetch",
+                  "load", "loads", "main", "execute", "invoke", "handle", "process", "query",
+                  "decode", "parse", "resolve", "start", "exec", "eval", "compile", "write"}
 _SHELL_DOWNLOAD = re.compile(
-    r"(-enc(odedcommand)?\s+[a-z0-9+/=]{24,}|-w(indowstyle)?\s+hidden|invoke-webrequest|\biwr\s|downloadstring|"
+    r"(-enc(odedcommand)?\s+[a-z0-9+/=]{24,}|invoke-webrequest|\biwr\s|downloadstring|"
     r"downloadfile|invoke-expression|\biex\b|certutil|bitsadmin|mshta|"
     r"\b(curl|wget)\b[^|;&]*https?://[^|;&]*(\||;|&&)\s*(ba|z)?sh\b|"
     r"\b(curl|wget)\b[^\n]*https?://[^\n]*\.(exe|sh|ps1|bat|bin|dll|scr|vbs)\b|"
@@ -114,15 +123,17 @@ def _key(target: ast.AST) -> str | None:
 
 
 def _is_environ(node: ast.AST) -> bool:
-    return _dotted(node) in {"os.environ", "environ"}
+    return _dotted(node) == "os.environ"
 
 
 class _FunctionTaint:
     """Labels for one function body (or a module's top-level statements)."""
 
-    def __init__(self, body: list[ast.stmt], returns: dict[str, frozenset[str]]):
+    def __init__(self, body: list[ast.stmt], returns: dict[str, frozenset[str]],
+                 cmd_names: frozenset[str] = EMPTY):
         self.body = body
         self.returns = returns          # package-wide: function name -> return labels
+        self.cmd_names = cmd_names      # names imported from subprocess / os in this module
         self.env: dict[str, frozenset[str]] = {}
         self.file_alias: dict[str, ast.expr] = {}   # with open(p) as f  ->  f: p
 
@@ -175,7 +186,8 @@ class _FunctionTaint:
 
         if name in {"urlopen", "urlretrieve"} or (name in _NET_FETCH and base in _NET_BASES):
             out.add(NET)
-        if name in self.returns:
+        # resolve package helpers only for f(...) / self.f(...) / cls.f(...)
+        if name in self.returns and (isinstance(call.func, ast.Name) or base in {"self", "cls"}):
             out |= self.returns[name]
         if name in _DECODERS and not dotted.startswith("json."):
             out.add(DECODED)
@@ -272,15 +284,26 @@ class _FunctionTaint:
                 out |= self.labels(node.value)
         return frozenset(out) - {"_CRED_PATH", NETFILE}
 
+    def _glued_to_domain(self, arg: ast.AST) -> bool:
+        """arg builds a hostname out of a host-id value plus a literal domain."""
+        if isinstance(arg, (ast.Name, ast.Attribute)):
+            return False
+        return any(isinstance(c, ast.Constant) and isinstance(c.value, str) and "." in c.value
+                   for c in ast.walk(arg))
+
+    def _bare_cmd(self, call: ast.Call) -> bool:
+        return isinstance(call.func, ast.Name) and (call.func.id in _CMD_BARE or call.func.id in self.cmd_names)
+
     def exec_aliases(self) -> set[str]:
         """Names bound to exec/eval: `e = exec`, `_ = eval('eval')`, `x = getattr(builtins, 'exec')`."""
         names = set(_CODE_EXEC)
+        aliasable = {"exec", "eval"}  # __import__/compile get wrapped legitimately (import hooks, tests)
         for node in self._stmts():
             if not isinstance(node, ast.Assign):
                 continue
             v = node.value
-            hit = (isinstance(v, ast.Name) and v.id in names) or (
-                isinstance(v, ast.Call) and any(isinstance(a, ast.Constant) and a.value in _CODE_EXEC
+            hit = (isinstance(v, ast.Name) and v.id in aliasable) or (
+                isinstance(v, ast.Call) and any(isinstance(a, ast.Constant) and a.value in aliasable
                                                 for a in v.args))
             if hit:
                 names |= {t.id for t in node.targets if isinstance(t, ast.Name)}
@@ -316,7 +339,7 @@ class _FunctionTaint:
                 elif DECODED in args or name not in _CODE_EXEC:
                     # calling exec/eval through an alias is obfuscation in itself
                     found.append(Finding("decoded_exec", func, line))
-            elif name in _CMD_EXEC and (base in _CMD_BASES or isinstance(node.func, ast.Name)):
+            elif name in _CMD_EXEC and (base in _CMD_BASES or self._bare_cmd(node)):
                 if NET in args:
                     found.append(Finding("remote_cmd_exec", func, line))
                 consts = " ".join(c.value for a in node.args for c in ast.walk(a)
@@ -324,16 +347,18 @@ class _FunctionTaint:
                 if consts and _SHELL_DOWNLOAD.search(consts) and \
                         not re.match(r"\s*(git|pip|python|cmake|make|conda|npm)\b", consts):
                     found.append(Finding("shell_download", func, line))
-            if name in _EXEC_FILE and NETFILE in args and \
-                    (base in _CMD_BASES or isinstance(node.func, ast.Name)):
+            if name in _EXEC_FILE and NETFILE in args and (base in _CMD_BASES or self._bare_cmd(node)):
                 found.append(Finding("download_exec", func, line))
-            if name in _NET_SEND and (base in _NET_BASES or name in {"urlopen", "Request"}):
+            if name in _NET_SEND and (base in _NET_BASES or name == "urlopen"):
                 for lab, rule in ((ENV_BULK, "exfil_env_bulk"), (CRED_FILE, "exfil_cred_file"),
                                   (HOSTINFO, "exfil_hostinfo")):
                     if lab in args:
                         found.append(Finding(rule, func, line))
             # hostname/username smuggled out in a GET URL / params, or as a DNS label
-            if ((name == "get" and base in _NET_BASES) or name in _DNS) and HOSTID in args:
+            if name == "get" and base in _NET_BASES and HOSTID in args:
+                found.append(Finding("exfil_hostid", func, line))
+            elif name in _DNS and HOSTID in args and node.args and self._glued_to_domain(node.args[0]):
+                # gethostbyname(gethostname()) is the usual "what's my LAN IP" idiom
                 found.append(Finding("exfil_hostid", func, line))
         return found
 
@@ -347,23 +372,37 @@ def _scopes(tree: ast.Module):
             yield node.name, node.body
 
 
+def _cmd_imports(tree: ast.Module) -> frozenset[str]:
+    """Local names bound by `from subprocess import run` / `from os import system`."""
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module in _CMD_BASES:
+            names |= {a.asname or a.name for a in node.names if a.name in _EXEC_FILE}
+    return frozenset(names)
+
+
 def analyze_package(modules: list[tuple[str, ast.Module]]) -> list[tuple[str, Finding]]:
     """modules: (rel_path, parsed tree). Returns (rel_path, Finding) pairs."""
+    cmd = {rel: _cmd_imports(tree) for rel, tree in modules}
     scopes = [(rel, name, body) for rel, tree in modules for name, body in _scopes(tree)]
+    n_defs: dict[str, int] = {}
+    for _, name, _ in scopes:
+        n_defs[name] = n_defs.get(name, 0) + 1
     returns: dict[str, frozenset[str]] = {}
-    # two rounds so helper -> helper -> caller chains resolve
+    # two rounds so helper -> helper -> caller chains resolve; only names defined
+    # once in the package and not generic, since resolution is by bare name
     for _ in range(2):
-        for _, name, body in scopes:
-            if name == "<module>":
+        for rel, name, body in scopes:
+            if name == "<module>" or n_defs[name] > 1 or name in _GENERIC_NAMES:
                 continue
-            ft = _FunctionTaint(body, returns)
+            ft = _FunctionTaint(body, returns, cmd[rel])
             ft.solve()
             lab = ft.return_labels()
             if lab:
                 returns[name] = returns.get(name, EMPTY) | lab
     out = []
     for rel, name, body in scopes:
-        ft = _FunctionTaint(body, returns)
+        ft = _FunctionTaint(body, returns, cmd[rel])
         ft.solve()
         out += [(rel, f) for f in ft.findings(name)]
     return out

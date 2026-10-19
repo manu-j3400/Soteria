@@ -74,6 +74,8 @@ def pack_code(src: str) -> str:
 def unpack_code(blob: str) -> str:
     import base64
     import zlib
+    if not blob:
+        return ""
     return zlib.decompress(base64.b64decode(blob)).decode("utf-8", "replace")
 
 

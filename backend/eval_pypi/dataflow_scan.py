@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -27,6 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from features import is_install_time, iter_sources, pack_code, read_jsonl  # noqa: E402
 from dataflow_rules import analyze_package  # noqa: E402
 
+_TEST_PATH = re.compile(r"(^|/)(tests?|testing)/|(^|/)test_[^/]*\.py$|_test\.py$|conftest\.py$")
+
 RULES = ["remote_code_exec", "remote_cmd_exec", "decoded_exec",
          "exfil_env_bulk", "exfil_cred_file", "exfil_hostinfo", "download_exec", "shell_download",
          "reverse_shell", "exfil_hostid", "oversize_install_file"]
@@ -35,9 +38,13 @@ RULES = ["remote_code_exec", "remote_cmd_exec", "decoded_exec",
 def scan(rec: dict, root: str) -> tuple[dict, list[dict]]:
     mods, srcs, oversize = [], {}, []
     for rel, src in iter_sources(Path(root), rec):
+        # tests never run on install or import
+        if _TEST_PATH.search(rel):
+            continue
         if src is None:
-            # a >1MB setup.py / build hook is padding to dodge scanners, not real code
-            if is_install_time(rel):
+            # a >1MB setup.py / build hook is padding to dodge scanners, not real code;
+            # a >1MB __init__.py is usually generated bindings (jsii, protobuf)
+            if is_install_time(rel) and not rel.endswith("__init__.py"):
                 oversize.append(rel)
             continue
         try:
