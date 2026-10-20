@@ -134,8 +134,8 @@ True positives: `asurion` 99.0.0 (dependency-confusion PoC, MAL-2026-18045,
 flagged install-time) and `pyyi` 2.5.0, a re-upload of the pyyi payload
 (`run_payload`: base64+gzip from a space-z.ai server, then exec) after
 PyPI removed 2.4.x. Not in OSV/Datadog at scan time; still live on PyPI
-Oct 19. Reported to PyPI via "Report project as malware" on Oct 20 (account
-mj3400), with an Inspector link to the exec line (cli.py:659). Missed: `vinted-mocked-apis` and `memories-core` (dependency-confusion
+Oct 19. Reported to PyPI via "Report project as malware" on Oct 20
+with an Inspector link to the exec line (cli.py:659). Missed: `vinted-mocked-apis` and `memories-core` (dependency-confusion
 beacons passing the hostname through a function parameter, which the rules
 don't track). New false-positive shapes seen but not tuned on: NSS `certutil`,
 `start cmd.exe /k`, `os.dup` of stdout read as a reverse shell.
