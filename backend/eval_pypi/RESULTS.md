@@ -111,16 +111,24 @@ installers and self-updaters (curl | sh, download wheel then pip install) 29,
 import-hook mocks 22. `webrunc` execs code from a caller-supplied URL: a
 dangerous API by design, not malware.
 
-### Live held-out run, interim (collected Oct 19 to 20, v3 rules, untuned on it)
+### Live held-out run (collected Oct 19 to 20, v3 rules frozen before collection)
 
-1,211 releases (all 799 new projects, 484 of 8,641 updates), downloaded within
-minutes of publish.
+1,593 releases (all 1,038 new projects, 638 of 11,336 updates), downloaded
+within minutes of publish. Reweighted to the full window (11,453 releases).
 
-| rule | flagged | precision | 95% CI |
-|---|---|---|---|
-| model, any unit | 99.2% | 0.02% | to 2.5% |
-| dataflow strong | 1.7% (14) | 8.3% | 2.0% to 34% |
-| dataflow any | 2.7% (19) | 6.0% | 1.4% to 26% |
+| rule | flagged (raw) | malicious | precision (reweighted) | 95% CI |
+|---|---|---|---|---|
+| model, any unit | 1,574 (99.4%) | 2 | 0.02% | to 2.5% |
+| dataflow strong | 20 (2.1%) | 2 | 5.7% (raw 2/20 = 10%) | 1.4% to 25% |
+| dataflow any | 26 (3.0%) | 2 | 4.3% (raw 7.7%) | 1.0% to 20% |
+| dataflow install-time | 2 (0.2%) | 1 | | |
+
+v4 (parameter taint, built and frozen on Datadog + the eval week, never on
+this data): any-rule flags 32, malicious 3. It catches `vinted-mocked-apis`
+(the beacon-through-a-parameter miss) and adds 5 benign flags (cluster
+registration, device session, a ClamAV GUI's issue report, an offensive
+security tool's OSINT lookup, an endpoint health check). `memories-core` and
+`hx-depconf-canary` still missed.
 
 True positives: `asurion` 99.0.0 (dependency-confusion PoC, MAL-2026-18045,
 flagged install-time) and `pyyi` 2.5.0, a re-upload of the pyyi payload
