@@ -207,7 +207,12 @@ placeholders). Unweighted counts below.
 - Constant-category gate rules were tuned on 28 smoke-test packages from
   inside the eval window.
 - Labels are one reviewer's first pass, heuristic patterns plus manual review
-  of risky and install-time units.
+  of risky and install-time units. Blind second pass (Oct 20): an independent
+  AI reviewer relabeled 25 random dataflow-flagged releases (week + live)
+  without seeing the first labels. Agreement 20/20 on the items with code
+  (19 direct, wandb-hivemind resolved: token exchange with W&B's own
+  hivemind.wandb.tools); 5 items had no snippet (v2 flags that v3 no longer
+  emits) and were excluded. No human second reviewer yet.
 - Datadog samples are mostly GuardDog detections (selection bias).
 
 ## Reproduce
