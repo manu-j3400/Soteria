@@ -1,4 +1,4 @@
-# Soteria on one week of PyPI (Oct 10 to 17, 2026)
+# Soteria on one week of PyPI
 
 Scope: Soteria is a multi-language detector (tree-sitter parsing plus the
 vulnerability_db pattern set for Go, Rust and others). This evaluation covers
