@@ -173,6 +173,33 @@ jcodemunch-mcp), localhost health probes (aicortex*, conexus), IP geolocation
 happen to be named `setup.py` (a CLI's `setup` command, a build helper). Decide
 on adoption after the live run, by rescanning it with `--rules v4`.
 
+## npm, one day (Oct 19, JS dataflow rules)
+
+`backend/src/dataflow_rules_js.py` (tree-sitter port of the same rules, plus
+npm install hooks) and `npm_scan.py`. `fetch_npm.py` sampled 2,000 of 5,462
+new packages and 1,000 of 43,595 updated ones from the replicate.npmjs.com
+changes feed; 2,610 downloaded (5 more were already npm security-holding
+placeholders). Unweighted counts below.
+
+| rule | flagged | malicious | precision |
+|---|---|---|---|
+| JS code dataflow rules | 28 (1.1%) | 0 | 0% |
+| `url_dependency` (metadata) | 6 (0.23%) | 6 | 6 of 6 |
+
+- All 3 OSV-known malicious packages in the sample were missed by the code
+  rules: dependency-only droppers with a 35-byte index.js whose payload is a
+  dependency on an http(s) tarball (`ltidisafe` from
+  `ltidi.storage.googleapis.com/depenconf/`, version 99.9.1). The
+  `url_dependency` rule was written after seeing them, so its 6/6 is
+  optimistic. It found 3 more packages from the same campaign that were not
+  in OSV yet: `@jm-telefonica/multibrand-components`,
+  `@fmr-ap153177/apex-kit-icons`, `@factoryz/apollo`.
+- The 28 code flags are bundler output: Ajv validators compiled with
+  `new Function` (12), legit script loaders (p5, a 3D engine), and whole
+  programs in one chunk where `process.env` and `fetch` end up in the same
+  scope. Feross's point 3 exactly: bundlers rewrite structure. Minified files
+  were already skipped; bundled-but-readable `dist/` code is the open problem.
+
 ## Caveats
 
 - Backfill, not live: malware removed before download (46 known) is missing,
