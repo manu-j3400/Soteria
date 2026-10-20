@@ -137,6 +137,42 @@ counted exactly): metadata-only typosquats, droppers that only declare a
 stealer in install_requires, payloads in .so/.bat/.dll/.sh/.js files.
 Estimated 100 to 150 of 758 unique payload clusters.
 
+### v4: parameter-aware taint (Oct 19, not yet adopted)
+
+`backend/src/dataflow_rules_v4.py` (`dataflow_scan.py --rules v4`, output in
+`scores/dataflow_v4/`). v3 is unchanged and stays the rule set for the live run.
+When a call passes labeled values into a package function (same resolution
+as return values: unique, non-generic name, `f()` or `self.f()`; plus bare calls
+to a generic name defined at the top of the same module, marked `loose`), the
+callee is re-analyzed with those parameters labeled (memoized per label set,
+depth 2). Findings sit on the callee's line, with the caller in `via`, and count as
+install-time when the outermost caller is. Only exfil-source labels (env dump,
+cred file, hostinfo/hostid) cross into parameters. Pushing NET/NETFILE/DECODED down too
+(`scores/dataflow_v4_alllabels/`) found nothing extra on Datadog but took week
+strong flags from 143 to 350. Those were all dev tools and self-updaters passing response
+fields to their own subprocess helpers.
+
+| rule | v3 | v4 | v4, all labels |
+|---|---|---|---|
+| Datadog strong, raw / unique payloads | 35.3% / 16.8% (127) | 39.8% / 19.0% (144) | same as v4 |
+| Datadog install-time, raw / unique | 37.8% / 18.2% (138) | 40.8% / 18.9% (143) | 40.8% / 19.0% |
+| week strong (raw, of 15,203) | 143 (0.94%) | 153 (1.01%) | 350 (2.30%) |
+| week any | 217 | 254 | 452 |
+| week install-time | 7 | 9 | 12 |
+
+Most of the Datadog gain is one Discord-token-stealer family (cred file read,
+then posted by an upload helper: 74 releases, 9 clusters), plus `send(data)`-style
+env/hostname beacons. Of the 47 week releases newly flagged by v4 (37 any + 10
+strong), all were read and none is malicious: generic HTTP wrappers handed
+labeled config (lonoboard, pdt-cli, omnimarket, scriptcollection, semantic-memory-mcp),
+device login/registration (hexiel, ergoda, hopsworks, aisquare-cli, stimulir,
+protolabs-agent), telemetry/report posts (autoclip-mcp, adbc-replicate,
+jcodemunch-mcp), localhost health probes (aicortex*, conexus), IP geolocation
+(archivebox), token refresh (aden-hive), API lookups (depictio-cli), LLM call
+(wfpy), self-update download (lium.io). Both new install-time flags are files that
+happen to be named `setup.py` (a CLI's `setup` command, a build helper). Decide
+on adoption after the live run, by rescanning it with `--rules v4`.
+
 ## Caveats
 
 - Backfill, not live: malware removed before download (46 known) is missing,
